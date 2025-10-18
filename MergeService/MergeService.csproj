@@ -5,6 +5,14 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <RootNamespace>net.nick4name.MergeService</RootNamespace>
+    <AssemblyVersion>1.25.10.0</AssemblyVersion>
+    <FileVersion>1.25.10.0</FileVersion>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DocumentFormat.OpenXml" Version="3.3.0" />
+    <PackageReference Include="Microsoft.AspNetCore.StaticFiles" Version="2.3.0" />
+    <PackageReference Include="PDFsharp-MigraDoc" Version="6.2.2" />
+  </ItemGroup>
 
 </Project>
