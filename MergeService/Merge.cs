@@ -19,7 +19,6 @@ namespace net.nick4name.MergeService {
       /// </summary>
       public IMyContext<T>? SrcContext { get; } = null;
 
-
       /// <summary>
       /// Restituisce l'istanza di merge per l'istanza generica T.
       /// </summary>
