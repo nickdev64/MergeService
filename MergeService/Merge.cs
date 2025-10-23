@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.StaticFiles;
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace net.nick4name.MergeService {
 
@@ -10,9 +9,10 @@ namespace net.nick4name.MergeService {
    /// <typeparam name="T">Classe di tipo DBContext che rappresenta un'istanza di tabella o vista di db</typeparam>
    /// <remarks>Gestisce il merge del file di testo template con i dati dell'istanza generica T.</remarks>
    public class Merge<T> : IMerge where T : class {
-      private byte[]? _file;
+      //private byte[]? file;
       private string? _filetext;
       private readonly IMyContext<T>? _context = null;
+      private string? _mime = null;
 
       /// <summary>
       /// Rappresenta il contesto dati per l'istanza generica T con cui realizzare il merge con il file template.
@@ -41,8 +41,8 @@ namespace net.nick4name.MergeService {
       public string FileToMerge {
          set {
             string filePath = Path.GetFullPath(value);
-            string mime = getContentType(filePath);
-            switch (mime) {
+            _mime = getContentType(filePath);
+            switch (_mime) {
                case "text/plain":
                   using (StreamReader reader = new StreamReader(filePath, Encoding.UTF8)) {
                      _filetext = reader.ReadToEnd();
@@ -51,7 +51,7 @@ namespace net.nick4name.MergeService {
                case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
                   break;
                default:
-                  throw new InvalidOperationException("File type not supported for merge: " + mime);
+                  throw new InvalidOperationException("File type not supported for merge: " + _mime);
             }
          }
       }
@@ -70,43 +70,23 @@ namespace net.nick4name.MergeService {
          if (_filetext == null || _filetext.Length == 0)
             throw new InvalidOperationException("File to merge is not set or empty.");
 
-         // lista dei placeholders del documento
-         List<string> placeholders = ExtractPlaceholders();
+         byte[]? file = null;
 
-         // accesso alla istanza generica T relativa alla fonte dati
-         T inst = SrcContext?.GetInstance()!;
+         switch (_mime) {
+            case "text/plain":
+               IMergeDocType mergeDoc = new MergeText<T>();
+               mergeDoc.SourceContent = Encoding.UTF8.GetBytes(_filetext);
+               byte[] mergedContent = mergeDoc.ExecuteMerge<T>(SrcContext!.GetInstance());
 
-         // esegue il merge
-         var properties = typeof(T).GetProperties();
-         foreach (string ph in placeholders) {
-            // costruisce il placeholder secondo la sintassi del documento
-            string placeholder = "{" + ph + "}";
-
-            // ottiene il valore corrispondente alla colonna avente per nome il placeholder
-            var prop = typeof(T).GetProperty(ph);
-            string value = prop?.GetValue(inst)?.ToString() ?? "";
-
-            // sostituisce il placeholder nel documento con il valore ottenuto
-            _filetext = _filetext!.Replace(placeholder, value);
+               file = mergedContent;
+               break;
+            case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+               break;
+            default:
+               throw new InvalidOperationException("File type not supported for merge: " + _mime);
          }
 
-         _file = Encoding.UTF8.GetBytes(_filetext);
-         return _file;
-      }
-
-      /// <summary>
-      /// Estrae tutti i placeholders presenti nel file di testo.
-      /// </summary>
-      /// <returns>Elenco dei placeholders presenti nei documenti.</returns>
-      private List<string> ExtractPlaceholders() {
-         var matches = Regex.Matches(_filetext, @"\{([^{}]+)\}");
-         var result = new List<string>();
-
-         foreach (Match match in matches) {
-            result.Add(match.Groups[1].Value);
-         }
-
-         return result;
+         return file!;
       }
 
       /// <summary>

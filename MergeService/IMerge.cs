@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace net.nick4name.MergeService {
+﻿namespace net.nick4name.MergeService {
 
    /// <summary>
    /// Interfaccia che definisce le funzionalità di merge del file di testo template con i dati dell'istanza generica T.
