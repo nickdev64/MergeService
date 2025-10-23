@@ -1,7 +1,10 @@
 ﻿namespace net.nick4name.MergeService {
 
-   public class MergeService<T> : IMyContext<T> where T : class {
+   public class MergeService<T> where T : class {
+
+      // *** ATTENZIONE!!! Non rinominare _ctx. Vedi Stampe.xaml.cs -> GetGenericInstance
       private IMyContext<T>? _ctx;
+      // ***
       private IMerge _merge;
 
       /// <summary>
