@@ -6,11 +6,12 @@ namespace net.nick4name.MergeService {
    /// <summary>
    /// Rappresenta l'implementazione concreta dell'interfaccia IMerge per l'istanza generica T.
    /// </summary>
-   /// <typeparam name="T">Classe di tipo DBContext che rappresenta un'istanza di tabella o vista di db</typeparam>
+   /// <typeparam name="T">Classe generica che rappresenta un'istanza di tabella o vista di db</typeparam>
    /// <remarks>Gestisce il merge del file di testo template con i dati dell'istanza generica T.</remarks>
    public class Merge<T> : IMerge where T : class {
       //private byte[]? file;
       private string? _filetext;
+      private string? _filePath;
       private readonly IMyContext<T>? _context = null;
       private string? _mime = null;
 
@@ -22,7 +23,9 @@ namespace net.nick4name.MergeService {
       /// <summary>
       /// Restituisce l'istanza di merge per l'istanza generica T.
       /// </summary>
-      /// <param name="srcContext">Contesto dati per l'istanza generica T con cui realizzare il merge con il file template.</param>
+      /// <param name="srcContext">
+      /// Contesto dati per l'istanza generica T con cui realizzare il merge con il file template.
+      /// </param>
       /// <remarks>
       /// Richiede che l'istanza di contesto dati sia valorizzata.
       /// Utilizzata per passare i dati con cui realizzare il merge.
@@ -49,6 +52,7 @@ namespace net.nick4name.MergeService {
                   }
                   break;
                case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+                  _filePath = filePath;
                   break;
                default:
                   throw new InvalidOperationException("File type not supported for merge: " + _mime);
@@ -67,20 +71,28 @@ namespace net.nick4name.MergeService {
       /// <returns></returns>
       /// <exception cref="InvalidOperationException"></exception>
       public byte[] ExecuteMerge() {
-         if (_filetext == null || _filetext.Length == 0)
-            throw new InvalidOperationException("File to merge is not set or empty.");
-
          byte[]? file = null;
 
          switch (_mime) {
             case "text/plain":
-               IMergeDocType mergeDoc = new MergeText<T>();
-               mergeDoc.SourceContent = Encoding.UTF8.GetBytes(_filetext);
-               byte[] mergedContent = mergeDoc.ExecuteMerge<T>(SrcContext!.GetInstance());
+               if (_filetext == null || _filetext.Length == 0)
+                  throw new InvalidOperationException("File template non impostato oppure vuoto.");
 
-               file = mergedContent;
+               IMergeDocType mergeTxt = new MergeText<T>();
+               mergeTxt.SourceContent = Encoding.UTF8.GetBytes(_filetext);
+               byte[] mergedText = mergeTxt.ExecuteMerge<T>(SrcContext!.GetInstance());
+
+               file = mergedText;
                break;
             case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+               if(string.IsNullOrEmpty(_filePath))
+                  throw new InvalidOperationException("File template non impostato.");
+
+               IMergeDocType mergeDocx = new MergeDocx<T>();
+               mergeDocx.Filename = _filePath;
+               byte[] mergedDocx = mergeDocx.ExecuteMerge<T>(SrcContext!.GetInstance());
+
+               file = mergedDocx;
                break;
             default:
                throw new InvalidOperationException("File type not supported for merge: " + _mime);

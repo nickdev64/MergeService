@@ -11,9 +11,14 @@
       /// <summary>
       /// Esegue il merge del documento template con i dati dell'istanza generica T.
       /// </summary>
-      /// <typeparam name="T">Classe di tipo DBContext che definisce una tabella o vista di db.</typeparam>
-      /// <param name="context">Istanza di tabella o vista di db nella forma DBContext.</param>
+      /// <typeparam name="T">Classe che definisce una tabella o vista di db.</typeparam>
+      /// <param name="context">Istanza di tabella o vista di db.</param>
       /// <returns>byte[] del documento dopo il merge.</returns>
       byte[] ExecuteMerge<T>(T context);
+
+      /// <summary>
+      /// Nome file del documento template.
+      /// </summary>
+      string Filename { set; }
    }
 }

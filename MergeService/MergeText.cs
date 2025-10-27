@@ -2,15 +2,15 @@
 using System.Text.RegularExpressions;
 
 namespace net.nick4name.MergeService {
-
    /// <summary>
    /// Classe che implementa il merge di un template di file di testo UTF8 in formato byte[], SourceContent, 
-   /// con il contesto dati di tipo T.
+   /// con il contesto dati generico di tipo T.
    /// </summary>
-   /// <typeparam name="T">Istanza di tabella o vista di db nella forma DBContext.</typeparam>
+   /// <typeparam name="T">Istanza di tabella o vista di db.</typeparam>
    internal class MergeText<T> : IMergeDocType where T : class {
       byte[]? _content;
       string _contTyped = "";
+      string? _filename = null;
 
       /// <summary>
       /// byte[] che rappresenta il contenuto del documento di testo template in formato UTF8.
@@ -23,11 +23,20 @@ namespace net.nick4name.MergeService {
       }
 
       /// <summary>
-      /// Esegue il merge del documento di testo template con i dati dell'istanza generica T
-      /// i cui placeholders sono nel formato {column_name}.
+      /// Nome file del documento template.
       /// </summary>
-      /// <typeparam name="T">Classe di tipo DBContext che definisce una tabella o vista di db.</typeparam>
-      /// <param name="context">Istanza di tabella o vista di db nella forma DBContext.</param>
+      public string Filename {
+         set {
+            _filename = value;
+         }
+      }
+
+      /// <summary>
+      /// Esegue il merge del documento di testo template con i dati dell'istanza generica T
+      /// i cui placeholders sono nel formato '{column_name}'.
+      /// </summary>
+      /// <typeparam name="T">Classe generica che definisce una tabella o vista di db.</typeparam>
+      /// <param name="context">Istanza di tabella o vista di db.</param>
       /// <returns>byte[] del documento di testo UTF8 dopo il merge.</returns>
       /// <remarks>
       /// I placeholder nel documento devono essere nel formato {column_name} dove column_name è nome 
@@ -38,6 +47,9 @@ namespace net.nick4name.MergeService {
       /// Egregio {FirstName} {LastName},
       /// </example>
       public byte[] ExecuteMerge<T>(T context) {
+         if (!string.IsNullOrEmpty(_filename)) {
+            _content = File.ReadAllBytes(_filename);
+         }
 
          // lista dei placeholders del documento
          List<string> placeholders = ExtractPlaceholders();
