@@ -20,5 +20,15 @@
       /// Nome file del documento template.
       /// </summary>
       string Filename { set; }
-   }
+
+      /// <summary>
+      /// Descrizione del nome che il file generato dopo il merge dovrà avere.
+      /// </summary>
+      string MaskFileMerged { set; }
+
+      /// <summary>
+      /// Nome del file generato dopo il merge.
+      /// </summary>
+      string FileMerged { get; }
+      }
 }

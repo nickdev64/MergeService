@@ -1,4 +1,6 @@
 ﻿using Microsoft.AspNetCore.StaticFiles;
+using net.nick4name.MergeService.Docx;
+using net.nick4name.MergeService.Text;
 using System.Text;
 
 namespace net.nick4name.MergeService {
@@ -9,7 +11,6 @@ namespace net.nick4name.MergeService {
    /// <typeparam name="T">Classe generica che rappresenta un'istanza di tabella o vista di db</typeparam>
    /// <remarks>Gestisce il merge del file di testo template con i dati dell'istanza generica T.</remarks>
    public class Merge<T> : IMerge where T : class {
-      //private byte[]? file;
       private string? _filetext;
       private string? _filePath;
       private readonly IMyContext<T>? _context = null;
@@ -90,9 +91,9 @@ namespace net.nick4name.MergeService {
 
                IMergeDocType mergeDocx = new MergeDocx<T>();
                mergeDocx.Filename = _filePath;
-               byte[] mergedDocx = mergeDocx.ExecuteMerge<T>(SrcContext!.GetInstance());
-
-               file = mergedDocx;
+               mergeDocx.MaskFileMerged = "CONTRATTO AFFITTO TURISTICO {Cognome} {Nome}.pdf";
+               mergeDocx.ExecuteMerge<T>(SrcContext!.GetInstance());
+               string mergedFile = mergeDocx.FileMerged;
                break;
             default:
                throw new InvalidOperationException("File type not supported for merge: " + _mime);

@@ -1,7 +1,7 @@
 ﻿using System.Text;
 using System.Text.RegularExpressions;
 
-namespace net.nick4name.MergeService {
+namespace net.nick4name.MergeService.Text {
    /// <summary>
    /// Classe che implementa il merge di un template di file di testo UTF8 in formato byte[], SourceContent, 
    /// con il contesto dati generico di tipo T.
@@ -32,6 +32,16 @@ namespace net.nick4name.MergeService {
       }
 
       /// <summary>
+      /// Proprietà non supportata.
+      /// </summary>
+      public string MaskFileMerged { set => throw new NotImplementedException(); }
+
+      /// <summary>
+      /// Proprietà non supportata.
+      /// </summary>
+      public string FileMerged => throw new NotImplementedException();
+
+      /// <summary>
       /// Esegue il merge del documento di testo template con i dati dell'istanza generica T
       /// i cui placeholders sono nel formato '{column_name}'.
       /// </summary>
@@ -55,7 +65,6 @@ namespace net.nick4name.MergeService {
          List<string> placeholders = ExtractPlaceholders();
 
          // esegue il merge
-         var properties = typeof(T).GetProperties();
          foreach (string ph in placeholders) {
             // costruisce il placeholder secondo la sintassi del documento
             string placeholder = "{" + ph + "}";
