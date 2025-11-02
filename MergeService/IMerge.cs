@@ -14,5 +14,10 @@
       /// Proprietà che imposta il path del file template di cui eseguire il merge con i dati dell'istanza generica T.
       /// </summary>
       string FileToMerge { set; }
+
+      /// <summary>
+      /// Proprietà che imposta il nome del file generato dopo il merge.
+      /// </summary>
+      string FileMerged { set; }
    }
 }

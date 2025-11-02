@@ -15,6 +15,7 @@ namespace net.nick4name.MergeService {
       private string? _filePath;
       private readonly IMyContext<T>? _context = null;
       private string? _mime = null;
+      private string? _fileMerged = null;
 
       /// <summary>
       /// Rappresenta il contesto dati per l'istanza generica T con cui realizzare il merge con il file template.
@@ -62,6 +63,11 @@ namespace net.nick4name.MergeService {
       }
 
       /// <summary>
+      /// Imposta il nome del file generato dopo il merge.
+      /// </summary>
+      public string FileMerged { set => _fileMerged = value; }
+
+      /// <summary>
       /// La funzione esegue il merge del file di testo d'istanza FileToMerge con i dati dell'istanza generica T.
       /// La logica di funzionamento è la seguente:
       /// 1) Estrae tutti i placeholder presenti nel file di testo, identificati dalla sintassi {NomeProprietà}.
@@ -86,14 +92,15 @@ namespace net.nick4name.MergeService {
                file = mergedText;
                break;
             case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-               if(string.IsNullOrEmpty(_filePath))
+               if (string.IsNullOrEmpty(_filePath))
                   throw new InvalidOperationException("File template non impostato.");
 
                IMergeDocType mergeDocx = new MergeDocx<T>();
                mergeDocx.Filename = _filePath;
-               mergeDocx.MaskFileMerged = "CONTRATTO AFFITTO TURISTICO {Cognome} {Nome}.pdf";
+               mergeDocx.FileMerged = _fileMerged!;
+               //mergeDocx.MaskFileMerged = "CONTRATTO AFFITTO TURISTICO {Cognome} {Nome}.pdf";
                mergeDocx.ExecuteMerge<T>(SrcContext!.GetInstance());
-               string mergedFile = mergeDocx.FileMerged;
+               //string mergedFile = mergeDocx.FileMerged;
                break;
             default:
                throw new InvalidOperationException("File type not supported for merge: " + _mime);

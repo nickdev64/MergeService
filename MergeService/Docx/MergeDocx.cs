@@ -42,9 +42,9 @@ namespace net.nick4name.MergeService.Docx {
       public string MaskFileMerged { set => _maskFileMerged = value; }
 
       /// <summary>
-      /// Nome del file generato dopo il merge in accordo con la definizione in MaskFileMerged.
+      /// Imposta il nome del file generato dopo il merge.
       /// </summary>
-      public string FileMerged { get => _fileMerged!; }
+      public string FileMerged { set => _fileMerged = value; }
 
       /// <summary>
       /// Esegue il merge di Filename con i dati dell'istanza generica T.
@@ -58,8 +58,8 @@ namespace net.nick4name.MergeService.Docx {
             throw new InvalidOperationException("Filename non impostato per l'operazione di merge.");
          }
 
-         if (string.IsNullOrEmpty(_maskFileMerged)) {
-            throw new InvalidOperationException("MaskFileMerged non impostato per l'operazione di merge.");
+         if (string.IsNullOrEmpty(_fileMerged)) {
+            throw new InvalidOperationException("FileMerged non impostato per l'operazione di merge.");
          }
 
          // lista dei placeholders del documento
@@ -68,7 +68,7 @@ namespace net.nick4name.MergeService.Docx {
          // esegue il merge
          MigraDoc.DocumentObjectModel.Document doc = ConvertWordToPdf(placeholders, context);
 
-         return File.ReadAllBytes(_maskFileMerged!);
+         return File.ReadAllBytes(_fileMerged!);
       }
 
       // Converts a Word document (.docx) to a MigraDoc Document and saves it as a PDF
@@ -133,7 +133,7 @@ namespace net.nick4name.MergeService.Docx {
          pdfRenderer.RenderDocument();
 
          // Save the generated PDF
-         pdfRenderer.PdfDocument.Save(_maskFileMerged!);
+         pdfRenderer.PdfDocument.Save(_fileMerged!);
          // Return the file.
          return doc;
       }

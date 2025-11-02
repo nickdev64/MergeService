@@ -10,7 +10,9 @@
       // *** ATTENZIONE!!! Non rinominare _ctx. Vedi Stampe.xaml.cs -> GetGenericInstance
       private IMyContext<T>? _ctx;
       // ***
+
       private IMerge _merge;
+      private string? _maskFileMerged;
 
       /// <summary>
       /// Restituisce il servizio di merge per l'istanza generica T.
@@ -45,6 +47,11 @@
       public T GetInstance() {
          return _ctx!.GetInstance();
       }
+
+      /// <summary>
+      /// Imposta il nome del file generato dopo il merge.
+      /// </summary>
+      public string FileMerged { set => _merge.FileMerged = value; }
 
    }
 }

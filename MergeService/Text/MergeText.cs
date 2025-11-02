@@ -39,7 +39,7 @@ namespace net.nick4name.MergeService.Text {
       /// <summary>
       /// Proprietà non supportata.
       /// </summary>
-      public string FileMerged => throw new NotImplementedException();
+      string IMergeDocType.FileMerged { set => throw new NotImplementedException(); }
 
       /// <summary>
       /// Esegue il merge del documento di testo template con i dati dell'istanza generica T

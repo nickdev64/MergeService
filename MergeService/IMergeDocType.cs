@@ -17,18 +17,18 @@
       byte[] ExecuteMerge<T>(T context);
 
       /// <summary>
-      /// Nome file del documento template.
+      /// Imposta il nome file del documento template.
       /// </summary>
       string Filename { set; }
 
       /// <summary>
-      /// Descrizione del nome che il file generato dopo il merge dovrà avere.
+      /// Imposta la descrizione del nome che il file generato dopo il merge dovrà avere.
       /// </summary>
-      string MaskFileMerged { set; }
+      string MaskFileMerged { set; } // secondo me non serve
 
       /// <summary>
-      /// Nome del file generato dopo il merge.
+      /// Imposta il nome del file generato dopo il merge.
       /// </summary>
-      string FileMerged { get; }
-      }
+      string FileMerged { set; }
+   }
 }
