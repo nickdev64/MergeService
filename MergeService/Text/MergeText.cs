@@ -25,7 +25,7 @@ namespace net.nick4name.MergeService.Text {
       /// <summary>
       /// Nome file del documento template.
       /// </summary>
-      public string Filename {
+      public string FileToMerge {
          set {
             _filename = value;
          }

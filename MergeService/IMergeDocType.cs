@@ -4,7 +4,7 @@
    /// </summary>
    internal interface IMergeDocType {
       /// <summary>
-      /// Contenuto del documento template
+      /// Passa il contenuto del documento template come byte[].
       /// </summary>
       byte[] SourceContent { set; }
 
@@ -19,7 +19,7 @@
       /// <summary>
       /// Imposta il nome file del documento template.
       /// </summary>
-      string Filename { set; }
+      string FileToMerge { set; }
 
       /// <summary>
       /// Imposta il nome del file generato dopo il merge.

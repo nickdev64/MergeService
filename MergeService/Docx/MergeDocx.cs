@@ -12,7 +12,7 @@ namespace net.nick4name.MergeService.Docx {
 
       /// <summary>
       /// byte[] che rappresenta il contenuto del documento di testo template.
-      /// Proprietà non supportata. Referenziare il documento template tramite la proprietà Filename.
+      /// Proprietà non supportata. Referenziare il documento template tramite la proprietà FileToMerge.
       /// </summary>
       /// <exception cref="NotImplementedException">Proprietà non supportata.</exception>
       public byte[] SourceContent { set => throw new NotImplementedException(); }
@@ -20,7 +20,7 @@ namespace net.nick4name.MergeService.Docx {
       /// <summary>
       /// Nome file del documento template.
       /// </summary>
-      public string Filename {
+      public string FileToMerge {
          set {
             _filename = value;
          }
@@ -32,7 +32,7 @@ namespace net.nick4name.MergeService.Docx {
       public string FileMerged { set => _fileMerged = value; }
 
       /// <summary>
-      /// Esegue il merge di Filename con i dati dell'istanza generica T.
+      /// Esegue il merge di FileToMerge con i dati dell'istanza generica T.
       /// Scriverà il file risultante in MaskFileMerged.
       /// </summary>
       /// <typeparam name="T">Classe generica che rappresenta un'istanza di tabella o vista di db.</typeparam>
@@ -40,7 +40,7 @@ namespace net.nick4name.MergeService.Docx {
       /// <returns>byte[] del file prodotto in MaskFileMerged.</returns>
       public byte[] ExecuteMerge<T>(T context) {
          if (string.IsNullOrEmpty(_filename)) {
-            throw new InvalidOperationException("Filename non impostato per l'operazione di merge.");
+            throw new InvalidOperationException("FileToMerge non impostato per l'operazione di merge.");
          }
 
          if (string.IsNullOrEmpty(_fileMerged)) {

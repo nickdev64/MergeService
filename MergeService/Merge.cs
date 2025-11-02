@@ -36,7 +36,7 @@ namespace net.nick4name.MergeService {
       }
 
       /// <summary>
-      /// Filename del file di testo template di cui eseguire il merge con i dati dell'istanza generica T.
+      /// FileToMerge del file di testo template di cui eseguire il merge con i dati dell'istanza generica T.
       /// MIME types supportati:
       /// - text/plain
       /// - application/vnd.openxmlformats-officedocument.wordprocessingml.document
@@ -95,7 +95,7 @@ namespace net.nick4name.MergeService {
                   throw new InvalidOperationException("File template non impostato.");
 
                IMergeDocType mergeDocx = new MergeDocx<T>();
-               mergeDocx.Filename = _filePath;
+               mergeDocx.FileToMerge = _filePath;
                mergeDocx.FileMerged = _fileMerged!;
                mergeDocx.ExecuteMerge<T>(SrcContext!.GetInstance());
                break;
