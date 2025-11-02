@@ -12,7 +12,6 @@
       // ***
 
       private IMerge _merge;
-      private string? _maskFileMerged;
 
       /// <summary>
       /// Restituisce il servizio di merge per l'istanza generica T.

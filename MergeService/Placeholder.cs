@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace net.nick4name.MergeService {
+﻿namespace net.nick4name.MergeService {
    /// <summary>
    /// Definisce un'istanza di placeholder presente nel documento template.
    /// </summary>

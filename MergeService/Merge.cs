@@ -13,7 +13,6 @@ namespace net.nick4name.MergeService {
    public class Merge<T> : IMerge where T : class {
       private string? _filetext;
       private string? _filePath;
-      private readonly IMyContext<T>? _context = null;
       private string? _mime = null;
       private string? _fileMerged = null;
 
@@ -98,9 +97,7 @@ namespace net.nick4name.MergeService {
                IMergeDocType mergeDocx = new MergeDocx<T>();
                mergeDocx.Filename = _filePath;
                mergeDocx.FileMerged = _fileMerged!;
-               //mergeDocx.MaskFileMerged = "CONTRATTO AFFITTO TURISTICO {Cognome} {Nome}.pdf";
                mergeDocx.ExecuteMerge<T>(SrcContext!.GetInstance());
-               //string mergedFile = mergeDocx.FileMerged;
                break;
             default:
                throw new InvalidOperationException("File type not supported for merge: " + _mime);

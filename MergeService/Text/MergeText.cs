@@ -34,11 +34,6 @@ namespace net.nick4name.MergeService.Text {
       /// <summary>
       /// Proprietà non supportata.
       /// </summary>
-      public string MaskFileMerged { set => throw new NotImplementedException(); }
-
-      /// <summary>
-      /// Proprietà non supportata.
-      /// </summary>
       string IMergeDocType.FileMerged { set => throw new NotImplementedException(); }
 
       /// <summary>

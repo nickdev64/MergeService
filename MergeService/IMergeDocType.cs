@@ -22,11 +22,6 @@
       string Filename { set; }
 
       /// <summary>
-      /// Imposta la descrizione del nome che il file generato dopo il merge dovrà avere.
-      /// </summary>
-      string MaskFileMerged { set; } // secondo me non serve
-
-      /// <summary>
       /// Imposta il nome del file generato dopo il merge.
       /// </summary>
       string FileMerged { set; }

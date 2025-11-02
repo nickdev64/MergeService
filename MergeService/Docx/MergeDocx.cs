@@ -4,12 +4,10 @@ using DocumentFormat.OpenXml.Wordprocessing;
 using MigraDoc.DocumentObjectModel;
 using MigraDoc.Rendering;
 using PdfSharp.Fonts;
-using System.Collections.Generic;
 
 namespace net.nick4name.MergeService.Docx {
    internal class MergeDocx<T> : IMergeDocType where T : class {
       string? _filename = null;
-      string? _maskFileMerged = null;
       string? _fileMerged = null;
 
       /// <summary>
@@ -27,19 +25,6 @@ namespace net.nick4name.MergeService.Docx {
             _filename = value;
          }
       }
-
-      /// <summary>
-      /// Nome che assumerà il file generato dopo il merge.
-      /// Può essere un nome fisso oppure una maschera con parti variabili.
-      /// Le parti variabili sono rappresentate dai placeholders {NomeProprietà},
-      /// dove NomeProprietà è il nome di una proprietà dell'istanza generica T.
-      /// </summary>
-      /// <remarks>
-      /// Supponento che l'istanza generica T abbia proprietà "Nome" con valore "Mario", e "Cognome" con valore "Rossi",
-      /// e che MaskFileMerged sia impostato a "Lettera_{Nome}_{Cognome}.pdf", il nome file generato dopo il merge sarà 
-      /// "Lettera_Mario_Rossi.pdf".
-      /// </remarks>
-      public string MaskFileMerged { set => _maskFileMerged = value; }
 
       /// <summary>
       /// Imposta il nome del file generato dopo il merge.
