@@ -36,7 +36,7 @@
       /// <returns>Array di byte del documento dopo il merge.</returns>
       /// <remarks>Richiede che la proprietà FileToMerge sia stata valorizzata.</remarks>
       public byte[] ExecuteMerge() {
-         return _merge.ExecuteMerge();
+         return _merge.ExecuteMerge(); //<T>(_ctx!.GetInstance());
       }
 
       /// <summary>

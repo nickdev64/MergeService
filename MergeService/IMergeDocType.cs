@@ -14,6 +14,6 @@
       /// <typeparam name="T">Classe che definisce una tabella o vista di db.</typeparam>
       /// <param name="context">Istanza di tabella o vista di db.</param>
       /// <returns>byte[] del documento dopo il merge.</returns>
-      byte[] ExecuteMerge<T>(T context);
+      new byte[] ExecuteMerge<T>(T context);
    }
 }

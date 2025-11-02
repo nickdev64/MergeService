@@ -77,6 +77,7 @@ namespace net.nick4name.MergeService {
       /// <returns></returns>
       /// <exception cref="InvalidOperationException"></exception>
       public byte[] ExecuteMerge() {
+         //public byte[] ExecuteMerge<T1>(T1 context) {
          byte[]? file = null;
 
          switch (_mime) {

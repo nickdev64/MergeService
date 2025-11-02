@@ -75,10 +75,6 @@ namespace net.nick4name.MergeService.Text {
          return Encoding.UTF8.GetBytes(_contTyped);
       }
 
-      public byte[] ExecuteMerge() {
-         throw new NotImplementedException();
-      }
-
       /// <summary>
       /// Estrae tutti i placeholders presenti nel file di testo.
       /// </summary>
@@ -92,6 +88,16 @@ namespace net.nick4name.MergeService.Text {
          }
 
          return result;
+      }
+
+      /// <summary>
+      /// Metodo non implementato.
+      /// Utlizzare ExecuteMerge<T>(T context).
+      /// </summary>
+      /// <returns></returns>
+      /// <exception cref="NotImplementedException"></exception>
+      public byte[] ExecuteMerge() {
+         throw new NotImplementedException();
       }
    }
 }

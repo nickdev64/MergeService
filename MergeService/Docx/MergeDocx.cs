@@ -52,11 +52,17 @@ namespace net.nick4name.MergeService.Docx {
          return File.ReadAllBytes(_fileMerged!);
       }
 
+      /// <summary>
+      /// Metodo non supportato.
+      /// Utlizzare ExecuteMerge<T>(T context).
+      /// </summary>
+      /// <returns></returns>
+      /// <exception cref="NotImplementedException"></exception>
       public byte[] ExecuteMerge() {
          throw new NotImplementedException();
       }
 
-#region Convert Word To PDF
+      #region Convert Word To PDF
       // Converts a Word document (.docx) to a MigraDoc Document and saves it as a PDF
       public MigraDoc.DocumentObjectModel.Document ConvertWordToPdf<T>(List<Placeholder> placeholders, T context) {
          GlobalFontSettings.FontResolver = new DejaVuFontResolver();
