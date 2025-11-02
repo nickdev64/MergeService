@@ -6,8 +6,8 @@ using MigraDoc.Rendering;
 using PdfSharp.Fonts;
 
 namespace net.nick4name.MergeService.Docx {
-   internal class MergeDocx<T> : IMergeDocType where T : class {
-      string? _filename = null;
+   internal class MergeDocx<T> : IMergeDocType, IMerge where T : class {
+      string? _fileToMerge = null;
       string? _fileMerged = null;
 
       /// <summary>
@@ -20,11 +20,7 @@ namespace net.nick4name.MergeService.Docx {
       /// <summary>
       /// Nome file del documento template.
       /// </summary>
-      public string FileToMerge {
-         set {
-            _filename = value;
-         }
-      }
+      public string FileToMerge { set => _fileToMerge = value; }
 
       /// <summary>
       /// Imposta il nome del file generato dopo il merge.
@@ -39,7 +35,7 @@ namespace net.nick4name.MergeService.Docx {
       /// <param name="context">Istanza di tabella o vista di db.</param>
       /// <returns>byte[] del file prodotto in MaskFileMerged.</returns>
       public byte[] ExecuteMerge<T>(T context) {
-         if (string.IsNullOrEmpty(_filename)) {
+         if (string.IsNullOrEmpty(_fileToMerge)) {
             throw new InvalidOperationException("FileToMerge non impostato per l'operazione di merge.");
          }
 
@@ -56,6 +52,11 @@ namespace net.nick4name.MergeService.Docx {
          return File.ReadAllBytes(_fileMerged!);
       }
 
+      public byte[] ExecuteMerge() {
+         throw new NotImplementedException();
+      }
+
+#region Convert Word To PDF
       // Converts a Word document (.docx) to a MigraDoc Document and saves it as a PDF
       public MigraDoc.DocumentObjectModel.Document ConvertWordToPdf<T>(List<Placeholder> placeholders, T context) {
          GlobalFontSettings.FontResolver = new DejaVuFontResolver();
@@ -68,7 +69,7 @@ namespace net.nick4name.MergeService.Docx {
          style.Font.Bold = true;
 
          // Open the Word document in read-only mode
-         using (var wordDoc = WordprocessingDocument.Open(_filename!, false)) {
+         using (var wordDoc = WordprocessingDocument.Open(_fileToMerge!, false)) {
             var body = wordDoc.MainDocumentPart!.Document.Body;
             ApplyPageSetup(wordDoc, section); // Apply page margins from Word to MigraDoc
 
@@ -236,6 +237,7 @@ namespace net.nick4name.MergeService.Docx {
          }
          return Colors.Black;
       }
+#endregion Convert Word To PDF
 
       /// <summary>
       /// Estrae tutti i placeholders presenti nel file di testo.
@@ -244,7 +246,7 @@ namespace net.nick4name.MergeService.Docx {
       private List<Placeholder> ExtractPlaceholders() {
          var mergeFields = new List<Placeholder>();
 
-         using (WordprocessingDocument wordDoc = WordprocessingDocument.Open(_filename!, false)) {
+         using (WordprocessingDocument wordDoc = WordprocessingDocument.Open(_fileToMerge!, false)) {
             var body = wordDoc.MainDocumentPart!.Document.Body;
             var runs = body!.Descendants<Run>().ToList();
 

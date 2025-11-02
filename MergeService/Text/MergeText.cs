@@ -7,7 +7,7 @@ namespace net.nick4name.MergeService.Text {
    /// con il contesto dati generico di tipo T.
    /// </summary>
    /// <typeparam name="T">Istanza di tabella o vista di db.</typeparam>
-   internal class MergeText<T> : IMergeDocType where T : class {
+   internal class MergeText<T> : IMergeDocType, IMerge where T : class {
       byte[]? _content;
       string _contTyped = "";
       string? _filename = null;
@@ -15,7 +15,7 @@ namespace net.nick4name.MergeService.Text {
       /// <summary>
       /// byte[] che rappresenta il contenuto del documento di testo template in formato UTF8.
       /// </summary>
-      public byte[] SourceContent {
+      byte[] IMergeDocType.SourceContent {
          set {
             _content = value;
             _contTyped = Encoding.UTF8.GetString(_content);
@@ -34,7 +34,7 @@ namespace net.nick4name.MergeService.Text {
       /// <summary>
       /// Proprietà non supportata.
       /// </summary>
-      string IMergeDocType.FileMerged { set => throw new NotImplementedException(); }
+      string IMerge.FileMerged { set => throw new NotImplementedException(); }
 
       /// <summary>
       /// Esegue il merge del documento di testo template con i dati dell'istanza generica T
@@ -73,6 +73,10 @@ namespace net.nick4name.MergeService.Text {
          }
 
          return Encoding.UTF8.GetBytes(_contTyped);
+      }
+
+      public byte[] ExecuteMerge() {
+         throw new NotImplementedException();
       }
 
       /// <summary>

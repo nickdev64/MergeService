@@ -2,7 +2,7 @@
    /// <summary>
    /// Interfaccia che astrae il tipo di documento template, txt, docx, ..., su cui eseguire il merge.
    /// </summary>
-   internal interface IMergeDocType {
+   internal interface IMergeDocType : IMerge {
       /// <summary>
       /// Passa il contenuto del documento template come byte[].
       /// </summary>
@@ -15,15 +15,5 @@
       /// <param name="context">Istanza di tabella o vista di db.</param>
       /// <returns>byte[] del documento dopo il merge.</returns>
       byte[] ExecuteMerge<T>(T context);
-
-      /// <summary>
-      /// Imposta il nome file del documento template.
-      /// </summary>
-      string FileToMerge { set; }
-
-      /// <summary>
-      /// Imposta il nome del file generato dopo il merge.
-      /// </summary>
-      string FileMerged { set; }
    }
 }
