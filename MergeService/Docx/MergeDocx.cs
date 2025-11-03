@@ -4,6 +4,8 @@ using DocumentFormat.OpenXml.Wordprocessing;
 using MigraDoc.DocumentObjectModel;
 using MigraDoc.Rendering;
 using PdfSharp.Fonts;
+using System.Data;
+using System.Diagnostics.Contracts;
 
 namespace net.nick4name.MergeService.Docx {
    internal class MergeDocx<T> : IMergeDocType, IMerge where T : class {
@@ -79,42 +81,70 @@ namespace net.nick4name.MergeService.Docx {
             var body = wordDoc.MainDocumentPart!.Document.Body;
             ApplyPageSetup(wordDoc, section); // Apply page margins from Word to MigraDoc
 
-            // Process each paragraph in the Word document
             foreach (var para in body!.Elements<DocumentFormat.OpenXml.Wordprocessing.Paragraph>()) {
-               // Add a paragraph
                var migraPara = section.AddParagraph();
-               ApplyParagraphFormatting(para, migraPara, section); // Apply paragraph-level formatting
+               ApplyParagraphFormatting(para, migraPara, section);
 
-               // Process each run (text span) within the paragraph
-               foreach (var run in para.Elements<Run>()) {
+               var runs = para.Elements<Run>().ToList();
+               int i = 0;
 
-                  // Skip MERGEFIELD placeholders (Avoid duplication)
-                  if (!run.InnerText.Contains("MERGEFIELD")) {
-                     // Add formatted text
-                     var text = migraPara.AddFormattedText(run.InnerText);
-                     ApplyTextFormatting(run, text); // Apply text-level formatting
-                  } else {
-                     // Extract the placeholder name from the run
-                     string[] plc = run.InnerText.Replace(" MERGEFIELD ", "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                     string ph = plc[0];
-                     Placeholder? plh = null;
-                     if (placeholders.Any(p => p.Name == ph)) {
-                        plh = placeholders.Where(p => p.Name == ph).FirstOrDefault();
+               while (i < runs.Count) {
+                  var run = runs[i];
+                  var fldChar = run.GetFirstChild<FieldChar>();
+
+                  if (fldChar != null && fldChar?.FieldCharType! == FieldCharValues.Begin) {
+                     int startIndex = i;
+                     int endIndex = -1;
+                     string? fieldName = null;
+
+                     // Cerca il nome del campo e la fine
+                     for (int j = i + 1; j < runs.Count; j++) {
+                        var r = runs[j];
+
+                        var fieldCode = r.GetFirstChild<FieldCode>();
+                        if (fieldCode != null && fieldCode.Text.Contains("MERGEFIELD")) {
+                           var tokens = fieldCode.Text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                           if (tokens.Length >= 2)
+                              fieldName = tokens[1];
+                        }
+
+                        var endChar = r.GetFirstChild<FieldChar>();
+                        if (endChar != null && endChar?.FieldCharType! == FieldCharValues.End) {
+                           endIndex = j;
+                           break;
+                        }
                      }
 
-                     // costruisce il placeholder secondo la sintassi del documento
-                     string placeholder = " MERGEFIELD " + plh!.Name;
+                     if (fieldName != null && endIndex > startIndex) {
+                        var prop = typeof(T).GetProperty(fieldName);
+                        string value = prop?.GetValue(context)?.ToString() ?? "";
 
-                     // ottiene il valore corrispondente alla colonna avente per nome il placeholder
-                     var prop = typeof(T).GetProperty(ph);
-                     string value = prop?.GetValue(context)?.ToString() ?? "";
+                        // Rimuove tutti i run tra begin e end inclusi
+                        for (int j = startIndex; j <= endIndex; j++) {
+                           para.RemoveChild(runs[j]);
+                        }
 
-                     string txt = run.InnerText.Replace(placeholder, value);
+                        // Inserisce il valore sostitutivo
+                        var newRun = new Run(new DocumentFormat.OpenXml.Wordprocessing.Text(value));
+                        para.InsertAt(newRun, startIndex);
 
-                     var text = migraPara.AddFormattedText(txt);
-                     ApplyTextFormatting(run, text); // Apply text-level formatting
+                        var text = migraPara.AddFormattedText(value);
+                        ApplyTextFormatting(run, text);
 
+                        // Ricostruisci la lista dei run dopo la modifica
+                        runs = para.Elements<Run>().ToList();
+                        i = startIndex + 1;
+                        continue;
+                     }
                   }
+
+                  // Run normale
+                  if (!run.InnerText.Contains("MERGEFIELD")) {
+                     var text = migraPara.AddFormattedText(run.InnerText);
+                     ApplyTextFormatting(run, text);
+                  }
+
+                  i++;
                }
             }
          }
@@ -243,7 +273,7 @@ namespace net.nick4name.MergeService.Docx {
          }
          return Colors.Black;
       }
-#endregion Convert Word To PDF
+      #endregion Convert Word To PDF
 
       /// <summary>
       /// Estrae tutti i placeholders presenti nel file di testo.
