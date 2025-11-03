@@ -196,9 +196,9 @@ namespace net.nick4name.MergeService.Docx {
 
             // Apply spacing (before, after, and line spacing)
             if (props.SpacingBetweenLines != null) {
-               migraPara.Format.SpaceBefore = Unit.FromPoint(props!.SpacingBetweenLines.Before! != null ? Convert.ToDouble(props!.SpacingBetweenLines.Before!) : 0);
-               migraPara.Format.SpaceAfter = Unit.FromPoint(props!.SpacingBetweenLines.After! != null ? Convert.ToDouble(props!.SpacingBetweenLines.After!) : 0);
-               migraPara.Format.LineSpacing = Unit.FromPoint(props!.SpacingBetweenLines.Line! != null ? Convert.ToDouble(props!.SpacingBetweenLines.Line!) : 0);
+               migraPara.Format.SpaceBefore = Unit.FromPoint(props!.SpacingBetweenLines.Before! != null ? Convert.ToDouble(props!.SpacingBetweenLines.Before!) / 20.0 : 0);
+               migraPara.Format.SpaceAfter = Unit.FromPoint(props!.SpacingBetweenLines.After! != null ? Convert.ToDouble(props!.SpacingBetweenLines.After!) / 20.0 : 0);
+               migraPara.Format.LineSpacing = Unit.FromPoint(props!.SpacingBetweenLines.Line! != null ? Convert.ToDouble(props!.SpacingBetweenLines.Line!) / 20.0 : 0);
             }
 
             // Apply indentation (respect page width and margins)
