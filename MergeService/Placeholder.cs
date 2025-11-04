@@ -2,7 +2,7 @@
    /// <summary>
    /// Definisce un'istanza di placeholder presente nel documento template.
    /// </summary>
-   internal class Placeholder {
+   public class Placeholder {
       /// <summary>
       /// [Obbligatorio] Nome del placeholder, es. il nome della colonna di tabella.
       /// </summary>

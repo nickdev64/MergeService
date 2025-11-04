@@ -6,6 +6,9 @@ using MigraDoc.Rendering;
 using PdfSharp.Fonts;
 using MigraListType = MigraDoc.DocumentObjectModel.ListType;
 using MigraListInfo = MigraDoc.DocumentObjectModel.ListInfo;
+using MigraDocDoc = MigraDoc.DocumentObjectModel.Document;
+using MigraDocParagraph = MigraDoc.DocumentObjectModel.Paragraph;
+using OpenXmlParagraph = DocumentFormat.OpenXml.Wordprocessing.Paragraph;
 
 namespace net.nick4name.MergeService.Docx {
    internal class MergeDocx<T> : IMergeDocType, IMerge where T : class {
@@ -49,7 +52,7 @@ namespace net.nick4name.MergeService.Docx {
          List<Placeholder> placeholders = ExtractPlaceholders();
 
          // esegue il merge
-         MigraDoc.DocumentObjectModel.Document doc = ConvertWordToPdf(placeholders, context);
+         MigraDocDoc doc = ConvertWordToPdf(placeholders, context);
 
          return File.ReadAllBytes(_fileMerged!);
       }
@@ -66,10 +69,10 @@ namespace net.nick4name.MergeService.Docx {
 
       #region Convert Word To PDF
       // Converts a Word document (.docx) to a MigraDoc Document and saves it as a PDF
-      public MigraDoc.DocumentObjectModel.Document ConvertWordToPdf<T>(List<Placeholder> placeholders, T context) {
+      public MigraDocDoc ConvertWordToPdf<T>(List<Placeholder> placeholders, T context) {
          GlobalFontSettings.FontResolver = new DejaVuFontResolver();
 
-         var doc = new MigraDoc.DocumentObjectModel.Document();
+         var doc = new MigraDocDoc();
          var section = doc.AddSection();
          section.PageSetup.PageFormat = PageFormat.A4; //A4 page
          var style = doc.Styles["Normal"]!;
@@ -81,8 +84,8 @@ namespace net.nick4name.MergeService.Docx {
             var body = wordDoc.MainDocumentPart!.Document.Body;
             ApplyPageSetup(wordDoc, section); // Apply page margins from Word to MigraDoc
 
-            foreach (var para in body!.Elements<DocumentFormat.OpenXml.Wordprocessing.Paragraph>()) {
-               MigraDoc.DocumentObjectModel.Paragraph? migraPara = null;
+            foreach (var para in body!.Elements<OpenXmlParagraph>()) {
+               MigraDocParagraph? migraPara = null;
 
                // Prova a convertire come elenco, altrimenti crea paragrafo normale
                if (!TryConvertListParagraph(wordDoc, para, section, out migraPara)) {
@@ -176,9 +179,9 @@ namespace net.nick4name.MergeService.Docx {
       /// <returns>True se la conversione è avvenuta altrimenti false.</returns>
       bool TryConvertListParagraph(
           WordprocessingDocument wordDoc,
-          DocumentFormat.OpenXml.Wordprocessing.Paragraph para,
+          OpenXmlParagraph para,
           Section section,
-          out MigraDoc.DocumentObjectModel.Paragraph? migraPara) {
+          out MigraDocParagraph? migraPara) {
 
          migraPara = null;
 
@@ -252,7 +255,7 @@ namespace net.nick4name.MergeService.Docx {
          }
       }
 
-      static void ApplyParagraphFormatting(DocumentFormat.OpenXml.Wordprocessing.Paragraph para, MigraDoc.DocumentObjectModel.Paragraph migraPara, Section section) {
+      static void ApplyParagraphFormatting(OpenXmlParagraph para, MigraDocParagraph migraPara, Section section) {
          // Get the paragraph properties.
          var props = para.ParagraphProperties;
          if (props != null) {

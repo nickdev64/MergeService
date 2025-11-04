@@ -10,6 +10,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Docx\MergeFieldExtractor.cs" />
+    <Compile Remove="Docx\MigraConverterHelper.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Remove="Fonts\DejaVuSans-Bold.ttf" />
     <None Remove="Fonts\DejaVuSans-BoldOblique.ttf" />
     <None Remove="Fonts\DejaVuSans-Oblique.ttf" />
