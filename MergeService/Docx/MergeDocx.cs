@@ -4,8 +4,8 @@ using DocumentFormat.OpenXml.Wordprocessing;
 using MigraDoc.DocumentObjectModel;
 using MigraDoc.Rendering;
 using PdfSharp.Fonts;
-using System.Data;
-using System.Diagnostics.Contracts;
+using MigraListType = MigraDoc.DocumentObjectModel.ListType;
+using MigraListInfo = MigraDoc.DocumentObjectModel.ListInfo;
 
 namespace net.nick4name.MergeService.Docx {
    internal class MergeDocx<T> : IMergeDocType, IMerge where T : class {
@@ -82,7 +82,13 @@ namespace net.nick4name.MergeService.Docx {
             ApplyPageSetup(wordDoc, section); // Apply page margins from Word to MigraDoc
 
             foreach (var para in body!.Elements<DocumentFormat.OpenXml.Wordprocessing.Paragraph>()) {
-               var migraPara = section.AddParagraph();
+               MigraDoc.DocumentObjectModel.Paragraph? migraPara = null;
+
+               // Prova a convertire come elenco, altrimenti crea paragrafo normale
+               if (!TryConvertListParagraph(wordDoc, para, section, out migraPara)) {
+                  migraPara = section.AddParagraph();
+               }
+
                ApplyParagraphFormatting(para, migraPara, section);
 
                var runs = para.Elements<Run>().ToList();
@@ -158,6 +164,67 @@ namespace net.nick4name.MergeService.Docx {
          pdfRenderer.PdfDocument.Save(_fileMerged!);
          // Return the file.
          return doc;
+      }
+
+      bool TryConvertListParagraph(
+          WordprocessingDocument wordDoc,
+          DocumentFormat.OpenXml.Wordprocessing.Paragraph para,
+          Section section,
+          out MigraDoc.DocumentObjectModel.Paragraph? migraPara) {
+
+         migraPara = null;
+
+         var numberingProps = para.GetFirstChild<NumberingProperties>();
+         if (numberingProps?.NumberingId?.Val == null)
+            return false;
+
+         int numId = numberingProps.NumberingId.Val.Value;
+         int ilvl = numberingProps.NumberingLevelReference?.Val?.Value ?? 0;
+
+         var numberingPart = wordDoc.MainDocumentPart?.NumberingDefinitionsPart;
+         if (numberingPart == null)
+            return false;
+
+         var numberingInstance = numberingPart.Numbering.Elements<NumberingInstance>()
+             .FirstOrDefault(n => n.NumberID?.Value == numId);
+         if (numberingInstance?.AbstractNumId?.Val == null)
+            return false;
+
+         int abstractNumId = numberingInstance.AbstractNumId.Val.Value;
+
+         var abstractNum = numberingPart.Numbering.Elements<AbstractNum>()
+             .FirstOrDefault(a => a.AbstractNumberId?.Value == abstractNumId);
+         if (abstractNum == null)
+            return false;
+
+         var level = abstractNum.Elements<Level>()
+             .FirstOrDefault(l => l.LevelIndex?.Value == ilvl);
+         if (level?.NumberingFormat?.Val == null)
+            return false;
+
+         var format = level.NumberingFormat.Val.Value;
+
+         // Crea il paragrafo MigraDoc con stile elenco
+         migraPara = section.AddParagraph();
+         migraPara.Style = "List";
+
+         MigraListType listType = format == NumberFormatValues.Bullet
+             ? ilvl switch {
+                0 => MigraListType.BulletList1,
+                1 => MigraListType.BulletList2,
+                _ => MigraListType.BulletList3
+             }
+             : ilvl switch {
+                0 => MigraListType.NumberList1,
+                1 => MigraListType.NumberList2,
+                _ => MigraListType.NumberList3
+             };
+
+         migraPara.Format.ListInfo = new MigraListInfo {
+            ListType = listType
+         };
+
+         return true;
       }
 
       // Applies page margins from the Word document to the MigraDoc section
