@@ -89,7 +89,7 @@ namespace net.nick4name.MergeService.Docx {
                   migraPara = section.AddParagraph();
                }
 
-               ApplyParagraphFormatting(para, migraPara, section);
+               ApplyParagraphFormatting(para, migraPara!, section);
 
                var runs = para.Elements<Run>().ToList();
                int i = 0;
@@ -134,7 +134,7 @@ namespace net.nick4name.MergeService.Docx {
                         var newRun = new Run(new DocumentFormat.OpenXml.Wordprocessing.Text(value));
                         para.InsertAt(newRun, startIndex);
 
-                        var text = migraPara.AddFormattedText(value);
+                        var text = migraPara!.AddFormattedText(value);
                         ApplyTextFormatting(run, text);
 
                         // Ricostruisci la lista dei run dopo la modifica
@@ -146,7 +146,7 @@ namespace net.nick4name.MergeService.Docx {
 
                   // Run normale
                   if (!run.InnerText.Contains("MERGEFIELD")) {
-                     var text = migraPara.AddFormattedText(run.InnerText);
+                     var text = migraPara!.AddFormattedText(run.InnerText);
                      ApplyTextFormatting(run, text);
                   }
 
@@ -166,6 +166,14 @@ namespace net.nick4name.MergeService.Docx {
          return doc;
       }
 
+      /// <summary>
+      /// Converte i paragrafi Word che sono elenchi in paragrafi MigraDoc con stile elenco.
+      /// </summary>
+      /// <param name="wordDoc"></param>
+      /// <param name="para"></param>
+      /// <param name="section"></param>
+      /// <param name="migraPara"></param>
+      /// <returns>True se la conversione è avvenuta altrimenti false.</returns>
       bool TryConvertListParagraph(
           WordprocessingDocument wordDoc,
           DocumentFormat.OpenXml.Wordprocessing.Paragraph para,
