@@ -9,6 +9,8 @@ using MigraListInfo = MigraDoc.DocumentObjectModel.ListInfo;
 using MigraDocDoc = MigraDoc.DocumentObjectModel.Document;
 using MigraDocParagraph = MigraDoc.DocumentObjectModel.Paragraph;
 using OpenXmlParagraph = DocumentFormat.OpenXml.Wordprocessing.Paragraph;
+using OpenXmlColor = DocumentFormat.OpenXml.Wordprocessing.Color;
+using OpenXmlUnderline = DocumentFormat.OpenXml.Wordprocessing.Underline;
 
 namespace net.nick4name.MergeService.Docx {
    internal class MergeDocx<T> : IMergeDocType, IMerge where T : class {
@@ -67,9 +69,83 @@ namespace net.nick4name.MergeService.Docx {
          throw new NotImplementedException();
       }
 
+      /// <summary>
+      /// Estrae tutti i placeholders presenti nel file di testo.
+      /// </summary>
+      /// <returns>Elenco dei placeholders presenti nei documenti.</returns>
+      private List<Placeholder> ExtractPlaceholders() {
+         var mergeFields = new List<Placeholder>();
+
+         using (WordprocessingDocument wordDoc = WordprocessingDocument.Open(_fileToMerge!, false)) {
+            var body = wordDoc.MainDocumentPart!.Document.Body;
+            var runs = body!.Descendants<Run>().ToList();
+
+            for (int i = 0; i < runs.Count; i++) {
+               var fldChar = runs[i].GetFirstChild<FieldChar>();
+               if (fldChar != null && fldChar.FieldCharType! == FieldCharValues.Begin) {
+                  string fieldCode = "";
+                  bool foundEnd = false;
+                  Placeholder? plc = null;
+
+                  for (int j = i + 1; j < runs.Count; j++) {
+                     var innerFldChar = runs[j].GetFirstChild<FieldChar>();
+                     if (innerFldChar != null && innerFldChar.FieldCharType! == FieldCharValues.End) {
+                        foundEnd = true;
+                        break;
+                     }
+
+                     foreach (var element in runs[j].Elements<OpenXmlElement>()) {
+                        if (element.LocalName == "instrText") {
+                           fieldCode += element.InnerText;
+                        }
+                     }
+                  }
+
+                  plc = new Placeholder();
+                  if (foundEnd && fieldCode.Contains("MERGEFIELD")) {
+                     var parts = fieldCode.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                     int index = Array.IndexOf(parts, "MERGEFIELD");
+                     if (index >= 0 && index + 1 < parts.Length) {
+                        string ph = parts[index + 1];
+                        if (!mergeFields.Any(p => p.Name == ph)) {
+                           switch (parts.Count() - 1) {
+                              case 1:
+                                 plc.Name = parts[1];
+                                 plc.RawDefinition = fieldCode.Replace(" MERGEFIELD ", "").Trim();
+                                 break;
+                              case 2:
+                                 plc.Name = parts[1];
+                                 plc.Type = parts[2];
+                                 plc.RawDefinition = fieldCode.Replace(" MERGEFIELD ", "").Trim();
+                                 break;
+                              case 4:
+                                 plc.Name = parts[1];
+                                 plc.Type = parts[2];
+                                 plc.Format = parts[4].Replace("\"", "");
+                                 plc.RawDefinition = fieldCode.Replace(" MERGEFIELD ", "").Trim();
+                                 break;
+                           }
+                           mergeFields.Add(plc);
+                        }
+                     }
+                  }
+               }
+            }
+         }
+
+         return mergeFields;
+      }
+
       #region Convert Word To PDF
-      // Converts a Word document (.docx) to a MigraDoc Document and saves it as a PDF
-      public MigraDocDoc ConvertWordToPdf<T>(List<Placeholder> placeholders, T context) {
+
+      /// <summary>
+      /// Converte il documento Word FileToMerge in PDF sostituendone i placeholders con i valori dell'istanza generica T.
+      /// </summary>
+      /// <typeparam name="T"></typeparam>
+      /// <param name="placeholders"></param>
+      /// <param name="context"></param>
+      /// <returns></returns>
+      private MigraDocDoc ConvertWordToPdf<T>(List<Placeholder> placeholders, T context) {
          GlobalFontSettings.FontResolver = new DejaVuFontResolver();
 
          var doc = new MigraDocDoc();
@@ -85,12 +161,8 @@ namespace net.nick4name.MergeService.Docx {
             ApplyPageSetup(wordDoc, section); // Apply page margins from Word to MigraDoc
 
             foreach (var para in body!.Elements<OpenXmlParagraph>()) {
-               MigraDocParagraph? migraPara = null;
-
                // Prova a convertire come elenco, altrimenti crea paragrafo normale
-               if (!TryConvertListParagraph(wordDoc, para, section, out migraPara)) {
-                  migraPara = section.AddParagraph();
-               }
+               var migraPara = TryConvertListParagraph(wordDoc, para, section);
 
                ApplyParagraphFormatting(para, migraPara!, section);
 
@@ -138,7 +210,7 @@ namespace net.nick4name.MergeService.Docx {
                         para.InsertAt(newRun, startIndex);
 
                         var text = migraPara!.AddFormattedText(value);
-                        ApplyTextFormatting(run, text);
+                        ApplyTextFormatting(run, text, para);
 
                         // Ricostruisci la lista dei run dopo la modifica
                         runs = para.Elements<Run>().ToList();
@@ -150,7 +222,7 @@ namespace net.nick4name.MergeService.Docx {
                   // Run normale
                   if (!run.InnerText.Contains("MERGEFIELD")) {
                      var text = migraPara!.AddFormattedText(run.InnerText);
-                     ApplyTextFormatting(run, text);
+                     ApplyTextFormatting(run, text, para);
                   }
 
                   i++;
@@ -177,7 +249,7 @@ namespace net.nick4name.MergeService.Docx {
       /// <param name="section"></param>
       /// <param name="migraPara"></param>
       /// <returns>True se la conversione è avvenuta altrimenti false.</returns>
-      bool TryConvertListParagraph(
+      bool TryConvertListParagraph_(
           WordprocessingDocument wordDoc,
           OpenXmlParagraph para,
           Section section,
@@ -236,6 +308,49 @@ namespace net.nick4name.MergeService.Docx {
          };
 
          return true;
+      }
+
+      private MigraDocParagraph TryConvertListParagraph(WordprocessingDocument wordDoc, OpenXmlParagraph para, Section section) {
+         var numberingProps = para.ParagraphProperties?.NumberingProperties;
+         //if (numberingProps?.NumberingId?.Val == null)
+         //   return null!;
+         
+         if (numberingProps?.NumberingId?.Val != null) {
+            int numId = numberingProps.NumberingId.Val.Value;
+            int ilvl = numberingProps.NumberingLevelReference?.Val?.Value ?? 0;
+
+            var numberingPart = wordDoc.MainDocumentPart?.NumberingDefinitionsPart;
+            var numberingInstance = numberingPart?.Numbering.Elements<NumberingInstance>()
+                .FirstOrDefault(n => n.NumberID?.Value == numId);
+            var abstractNumId = numberingInstance?.AbstractNumId?.Val?.Value;
+
+            var abstractNum = numberingPart?.Numbering.Elements<AbstractNum>()
+                .FirstOrDefault(a => a.AbstractNumberId?.Value == abstractNumId);
+            var level = abstractNum?.Elements<Level>()
+                .FirstOrDefault(l => l.LevelIndex?.Value == ilvl);
+            var format = level?.NumberingFormat?.Val?.Value;
+
+            if (format != null) {
+               var migraPara = section.AddParagraph();
+               migraPara.Style = "List";
+               migraPara.Format.ListInfo = new ListInfo {
+                  ListType = format == NumberFormatValues.Bullet
+                       ? ilvl switch {
+                          0 => ListType.BulletList1,
+                          1 => ListType.BulletList2,
+                          _ => ListType.BulletList3
+                       }
+                       : ilvl switch {
+                          0 => ListType.NumberList1,
+                          1 => ListType.NumberList2,
+                          _ => ListType.NumberList3
+                       }
+               };
+               return migraPara;
+            }
+         }
+
+         return section.AddParagraph();
       }
 
       // Applies page margins from the Word document to the MigraDoc section
@@ -321,23 +436,53 @@ namespace net.nick4name.MergeService.Docx {
          }
       }
 
-      // Applies character formatting from a Word Run to a MigraDoc FormattedText object
-      static void ApplyTextFormatting(Run run, FormattedText text) {
-         var props = run.RunProperties;
-         if (props != null) {
-            text.Bold = props.Bold != null;
-            text.Italic = props.Italic != null;
-            text.Underline = props.Underline != null ? MigraDoc.DocumentObjectModel.Underline.Single : MigraDoc.DocumentObjectModel.Underline.None;
-            text.Size = props.FontSize != null ? Convert.ToDouble(props!.FontSize.Val!) / 2 : 12;
+      /// <summary>
+      /// Converte la formattazione del testo da Word a MigraDoc.
+      /// Considera sia la formattazione del run che quella del paragrafo.
+      /// Gestisce grassetto, corsivo, sottolineato, dimensione, colore e font.
+      /// </summary>
+      /// <param name="run">Unità di base di testo nell'XML in OpenXML <w:r>.</param>
+      /// <param name="text">Frammento di testo in MigraDoc con formattazione applicata all’interno di un paragrafo.</param>
+      /// <param name="para">Unità strutturale base di un documento Word in OpenXML: ogni paragrafo può contenere testo, 
+      /// formattazione, elenchi, stili, interruzioni e altro.<w:p></param>
+      static void ApplyTextFormatting(Run run, FormattedText text, OpenXmlParagraph para) {
+         var runProps = run.RunProperties;
+         var paraProps = para.ParagraphProperties?.ParagraphMarkRunProperties;
 
-            if (props.Color != null && !string.IsNullOrEmpty(props!.Color.Val!)) {
-               text.Color = ConvertHexToColor(props!.Color.Val!);
-            }
-
-            if (props.RunFonts != null && props!.RunFonts.Ascii! != null) {
-               text.Font.Name = props!.RunFonts.Ascii!?.Value ?? "Times New Roman";
-            }
+         bool IsBold(OpenXmlElement? props) {
+            var b = props?.GetFirstChild<Bold>();
+            var bcs = props?.GetFirstChild<BoldComplexScript>();
+            return (b != null && (b.Val == null || b.Val.Value != false)) ||
+                   (bcs != null && (bcs.Val == null || bcs.Val.Value != false));
          }
+
+         bool IsItalic(OpenXmlElement? props) {
+            var i = props?.GetFirstChild<Italic>();
+            var ics = props?.GetFirstChild<ItalicComplexScript>();
+            return (i != null && (i.Val == null || i.Val.Value != false)) ||
+                   (ics != null && (ics.Val == null || ics.Val.Value != false));
+         }
+
+         bool IsUnderline(OpenXmlElement? props) {
+            var u = props?.GetFirstChild<OpenXmlUnderline>();
+            return u != null && (u.Val == null || u.Val.Value != UnderlineValues.None);
+         }
+
+         text.Bold = IsBold(runProps) || IsBold(paraProps);
+         text.Italic = IsItalic(runProps) || IsItalic(paraProps);
+         text.Underline = IsUnderline(runProps) || IsUnderline(paraProps)
+             ? MigraDoc.DocumentObjectModel.Underline.Single
+             : MigraDoc.DocumentObjectModel.Underline.None;
+
+         var fontSize = runProps?.FontSize?.Val ?? paraProps?.GetFirstChild<FontSize>()?.Val;
+         text.Size = fontSize != null ? Convert.ToDouble(fontSize) / 2.0 : 12;
+
+         var color = runProps?.Color?.Val ?? paraProps?.GetFirstChild<OpenXmlColor>()?.Val;
+         if (!string.IsNullOrEmpty(color))
+            text.Color = ConvertHexToColor(color!);
+
+         var fontName = runProps?.RunFonts?.Ascii?.Value ?? paraProps?.GetFirstChild<RunFonts>()?.Ascii?.Value;
+         text.Font.Name = !string.IsNullOrEmpty(fontName) ? fontName : "Times New Roman";
       }
 
       // Converts a hex color code (e.g., "FF0000") to a MigraDoc Color
@@ -352,72 +497,5 @@ namespace net.nick4name.MergeService.Docx {
          return Colors.Black;
       }
       #endregion Convert Word To PDF
-
-      /// <summary>
-      /// Estrae tutti i placeholders presenti nel file di testo.
-      /// </summary>
-      /// <returns>Elenco dei placeholders presenti nei documenti.</returns>
-      private List<Placeholder> ExtractPlaceholders() {
-         var mergeFields = new List<Placeholder>();
-
-         using (WordprocessingDocument wordDoc = WordprocessingDocument.Open(_fileToMerge!, false)) {
-            var body = wordDoc.MainDocumentPart!.Document.Body;
-            var runs = body!.Descendants<Run>().ToList();
-
-            for (int i = 0; i < runs.Count; i++) {
-               var fldChar = runs[i].GetFirstChild<FieldChar>();
-               if (fldChar != null && fldChar.FieldCharType! == FieldCharValues.Begin) {
-                  string fieldCode = "";
-                  bool foundEnd = false;
-                  Placeholder? plc = null;
-
-                  for (int j = i + 1; j < runs.Count; j++) {
-                     var innerFldChar = runs[j].GetFirstChild<FieldChar>();
-                     if (innerFldChar != null && innerFldChar.FieldCharType! == FieldCharValues.End) {
-                        foundEnd = true;
-                        break;
-                     }
-
-                     foreach (var element in runs[j].Elements<OpenXmlElement>()) {
-                        if (element.LocalName == "instrText") {
-                           fieldCode += element.InnerText;
-                        }
-                     }
-                  }
-
-                  plc = new Placeholder();
-                  if (foundEnd && fieldCode.Contains("MERGEFIELD")) {
-                     var parts = fieldCode.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-                     int index = Array.IndexOf(parts, "MERGEFIELD");
-                     if (index >= 0 && index + 1 < parts.Length) {
-                        string ph = parts[index + 1];
-                        if (!mergeFields.Any(p => p.Name == ph)) {
-                           switch (parts.Count() - 1) {
-                              case 1:
-                                 plc.Name = parts[1];
-                                 plc.RawDefinition = fieldCode.Replace(" MERGEFIELD ", "").Trim();
-                                 break;
-                              case 2:
-                                 plc.Name = parts[1];
-                                 plc.Type = parts[2];
-                                 plc.RawDefinition = fieldCode.Replace(" MERGEFIELD ", "").Trim();
-                                 break;
-                              case 4:
-                                 plc.Name = parts[1];
-                                 plc.Type = parts[2];
-                                 plc.Format = parts[4].Replace("\"", "");
-                                 plc.RawDefinition = fieldCode.Replace(" MERGEFIELD ", "").Trim();
-                                 break;
-                           }
-                           mergeFields.Add(plc);
-                        }
-                     }
-                  }
-               }
-            }
-         }
-
-         return mergeFields;
-      }
    }
 }

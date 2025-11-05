@@ -16,7 +16,7 @@ namespace net.nick4name.MergeService.Docx {
          };
       }
 
-      public FontResolverInfo ResolveTypeface(string familyName, bool isBold, bool isItalic) {
+      public FontResolverInfo ResolveTypeface_(string familyName, bool isBold, bool isItalic) {
          if (familyName.Equals("DejaVuSans", StringComparison.OrdinalIgnoreCase)) {
             var suffix = (isBold, isItalic) switch {
                (true, true) => "#bi",
@@ -27,6 +27,20 @@ namespace net.nick4name.MergeService.Docx {
             return new FontResolverInfo("DejaVuSans" + suffix);
          }
 
+         return new FontResolverInfo("DejaVuSans");
+      }
+
+      public FontResolverInfo ResolveTypeface(string familyName, bool isBold, bool isItalic) {
+         if (familyName.Equals("Times New Roman", StringComparison.OrdinalIgnoreCase) ||
+             familyName.Equals("Arial", StringComparison.OrdinalIgnoreCase)) {
+            var suffix = (isBold, isItalic) switch {
+               (true, true) => "#bi",
+               (true, false) => "#b",
+               (false, true) => "#i",
+               _ => ""
+            };
+            return new FontResolverInfo("DejaVuSans" + suffix);
+         }
          return new FontResolverInfo("DejaVuSans");
       }
 
