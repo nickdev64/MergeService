@@ -16,6 +16,7 @@ namespace net.nick4name.MergeService.Docx {
    internal class MergeDocx<T> : IMergeDocType, IMerge where T : class {
       string? _fileToMerge = null;
       string? _fileMerged = null;
+      private int? _lastNumId = null;
 
       /// <summary>
       /// byte[] che rappresenta il contenuto del documento di testo template.
@@ -249,72 +250,8 @@ namespace net.nick4name.MergeService.Docx {
       /// <param name="section"></param>
       /// <param name="migraPara"></param>
       /// <returns>True se la conversione è avvenuta altrimenti false.</returns>
-      bool TryConvertListParagraph_(
-          WordprocessingDocument wordDoc,
-          OpenXmlParagraph para,
-          Section section,
-          out MigraDocParagraph? migraPara) {
-
-         migraPara = null;
-
-         var numberingProps = para.GetFirstChild<NumberingProperties>();
-         if (numberingProps?.NumberingId?.Val == null)
-            return false;
-
-         int numId = numberingProps.NumberingId.Val.Value;
-         int ilvl = numberingProps.NumberingLevelReference?.Val?.Value ?? 0;
-
-         var numberingPart = wordDoc.MainDocumentPart?.NumberingDefinitionsPart;
-         if (numberingPart == null)
-            return false;
-
-         var numberingInstance = numberingPart.Numbering.Elements<NumberingInstance>()
-             .FirstOrDefault(n => n.NumberID?.Value == numId);
-         if (numberingInstance?.AbstractNumId?.Val == null)
-            return false;
-
-         int abstractNumId = numberingInstance.AbstractNumId.Val.Value;
-
-         var abstractNum = numberingPart.Numbering.Elements<AbstractNum>()
-             .FirstOrDefault(a => a.AbstractNumberId?.Value == abstractNumId);
-         if (abstractNum == null)
-            return false;
-
-         var level = abstractNum.Elements<Level>()
-             .FirstOrDefault(l => l.LevelIndex?.Value == ilvl);
-         if (level?.NumberingFormat?.Val == null)
-            return false;
-
-         var format = level.NumberingFormat.Val.Value;
-
-         // Crea il paragrafo MigraDoc con stile elenco
-         migraPara = section.AddParagraph();
-         migraPara.Style = "List";
-
-         MigraListType listType = format == NumberFormatValues.Bullet
-             ? ilvl switch {
-                0 => MigraListType.BulletList1,
-                1 => MigraListType.BulletList2,
-                _ => MigraListType.BulletList3
-             }
-             : ilvl switch {
-                0 => MigraListType.NumberList1,
-                1 => MigraListType.NumberList2,
-                _ => MigraListType.NumberList3
-             };
-
-         migraPara.Format.ListInfo = new MigraListInfo {
-            ListType = listType
-         };
-
-         return true;
-      }
-
       private MigraDocParagraph TryConvertListParagraph(WordprocessingDocument wordDoc, OpenXmlParagraph para, Section section) {
          var numberingProps = para.ParagraphProperties?.NumberingProperties;
-         //if (numberingProps?.NumberingId?.Val == null)
-         //   return null!;
-         
          if (numberingProps?.NumberingId?.Val != null) {
             int numId = numberingProps.NumberingId.Val.Value;
             int ilvl = numberingProps.NumberingLevelReference?.Val?.Value ?? 0;
@@ -333,19 +270,28 @@ namespace net.nick4name.MergeService.Docx {
             if (format != null) {
                var migraPara = section.AddParagraph();
                migraPara.Style = "List";
+
+               var listType = format == NumberFormatValues.Bullet
+                   ? ilvl switch {
+                      0 => ListType.BulletList1,
+                      1 => ListType.BulletList2,
+                      _ => ListType.BulletList3
+                   }
+                   : ilvl switch {
+                      0 => ListType.NumberList1,
+                      1 => ListType.NumberList2,
+                      _ => ListType.NumberList3
+                   };
+
+               // Gestione riavvio numerazione
+               bool isNewList = _lastNumId != numId;
+               _lastNumId = numId;
+
                migraPara.Format.ListInfo = new ListInfo {
-                  ListType = format == NumberFormatValues.Bullet
-                       ? ilvl switch {
-                          0 => ListType.BulletList1,
-                          1 => ListType.BulletList2,
-                          _ => ListType.BulletList3
-                       }
-                       : ilvl switch {
-                          0 => ListType.NumberList1,
-                          1 => ListType.NumberList2,
-                          _ => ListType.NumberList3
-                       }
+                  ListType = listType,
+                  ContinuePreviousList = !isNewList
                };
+
                return migraPara;
             }
          }
