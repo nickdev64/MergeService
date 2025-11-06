@@ -12,6 +12,8 @@
   <ItemGroup>
     <Compile Remove="Docx\MergeFieldExtractor.cs" />
     <Compile Remove="Docx\MigraConverterHelper.cs" />
+    <Compile Remove="IMerge.cs" />
+    <Compile Remove="IMergeDocType.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -36,6 +38,10 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.10" />
     <PackageReference Include="PDFsharp-MigraDoc-GDI" Version="6.2.2" />
     <PackageReference Include="System.Drawing.Common" Version="9.0.10" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\MergeExtensions\MergeExtensions.csproj" />
   </ItemGroup>
 
 </Project>

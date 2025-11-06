@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using System.Text.RegularExpressions;
+using net.nick4name.MergeExtensions;
 
 namespace net.nick4name.MergeService.Text {
    /// <summary>

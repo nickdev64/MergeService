@@ -13,6 +13,7 @@ using OpenXmlColor = DocumentFormat.OpenXml.Wordprocessing.Color;
 using OpenXmlUnderline = DocumentFormat.OpenXml.Wordprocessing.Underline;
 using OpenXmlIndentetion = DocumentFormat.OpenXml.Wordprocessing.Indentation;
 using OpenXmlText = DocumentFormat.OpenXml.Wordprocessing.Text;
+using net.nick4name.MergeExtensions;
 
 namespace net.nick4name.MergeService.Docx {
    internal class MergeDocx<T> : IMergeDocType, IMerge where T : class {
