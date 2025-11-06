@@ -11,6 +11,8 @@ using MigraDocParagraph = MigraDoc.DocumentObjectModel.Paragraph;
 using OpenXmlParagraph = DocumentFormat.OpenXml.Wordprocessing.Paragraph;
 using OpenXmlColor = DocumentFormat.OpenXml.Wordprocessing.Color;
 using OpenXmlUnderline = DocumentFormat.OpenXml.Wordprocessing.Underline;
+using OpenXmlIndentetion = DocumentFormat.OpenXml.Wordprocessing.Indentation;
+using OpenXmlText = DocumentFormat.OpenXml.Wordprocessing.Text;
 
 namespace net.nick4name.MergeService.Docx {
    internal class MergeDocx<T> : IMergeDocType, IMerge where T : class {
@@ -149,6 +151,9 @@ namespace net.nick4name.MergeService.Docx {
       private MigraDocDoc ConvertWordToPdf<T>(List<Placeholder> placeholders, T context) {
          GlobalFontSettings.FontResolver = new DejaVuFontResolver();
 
+         int currentNumId = -1;
+         int currentItemNumber = 1;
+
          var doc = new MigraDocDoc();
          var section = doc.AddSection();
          section.PageSetup.PageFormat = PageFormat.A4; //A4 page
@@ -162,8 +167,24 @@ namespace net.nick4name.MergeService.Docx {
             ApplyPageSetup(wordDoc, section); // Apply page margins from Word to MigraDoc
 
             foreach (var para in body!.Elements<OpenXmlParagraph>()) {
-               // Prova a convertire come elenco, altrimenti crea paragrafo normale
-               var migraPara = TryConvertListParagraph(wordDoc, para, section);
+               // riproduce elenchi numerati word in pdf e relativa indentazione
+               var numProps = para.ParagraphProperties?.NumberingProperties;
+               MigraDocParagraph migraPara;
+
+               if (numProps?.NumberingId?.Val != null) {
+                  int numId = numProps.NumberingId.Val.Value;
+
+                  // Se cambia il gruppo di numerazione, resetta il contatore
+                  if (numId != currentNumId) {
+                     currentNumId = numId;
+                     currentItemNumber = 1;
+                  }
+
+                  migraPara = RenderManualListItemFromWord(para, section, wordDoc, currentItemNumber++);
+               } else {
+                  migraPara = section.AddParagraph();
+               }
+               //
 
                ApplyParagraphFormatting(para, migraPara!, section);
 
@@ -283,7 +304,7 @@ namespace net.nick4name.MergeService.Docx {
                       _ => ListType.NumberList3
                    };
 
-               // Gestione riavvio numerazione
+               // 🔁 Riavvio numerazione se numId cambia
                bool isNewList = _lastNumId != numId;
                _lastNumId = numId;
 
@@ -292,11 +313,86 @@ namespace net.nick4name.MergeService.Docx {
                   ContinuePreviousList = !isNewList
                };
 
+               // 📐 Indentazione da <w:ind> nel paragrafo
+               ApplyIndentation(para, migraPara);
+
                return migraPara;
             }
          }
 
          return section.AddParagraph();
+      }
+
+      /// <summary>
+      /// Legge l’indentazione da <w:lvl> nel NumberingDefinitionsPart
+      /// </summary>
+      /// <param name="wordDoc"></param>
+      /// <param name="numId"></param>
+      /// <param name="ilvl"></param>
+      /// <returns></returns>
+
+      private MigraDocParagraph RenderManualListItemFromWord(OpenXmlParagraph para, Section section, WordprocessingDocument wordDoc, int itemNumber) {
+         var migraPara = section.AddParagraph();
+
+         // Estrai il testo del paragrafo
+         string text = string.Join("", para.Descendants<DocumentFormat.OpenXml.Wordprocessing.Text>().Select(t => t.Text));
+
+         // Inserisci numero + tabulazione
+         migraPara.AddFormattedText($"{itemNumber}. ", TextFormat.Bold);
+         migraPara.AddTab();
+         migraPara.AddText(text);
+
+         // Estrai numId e ilvl
+         var numProps = para.ParagraphProperties?.NumberingProperties;
+         int numId = numProps?.NumberingId?.Val ?? -1;
+         int ilvl = numProps?.NumberingLevelReference?.Val ?? 0;
+
+         // Recupera indentazione dal livello elenco
+         var numberingPart = wordDoc.MainDocumentPart?.NumberingDefinitionsPart;
+         if (numberingPart != null) {
+            var abstractNumId = numberingPart.Numbering.Elements<NumberingInstance>()
+                .FirstOrDefault(n => n.NumberID! == numId)?
+                .AbstractNumId?.Val;
+
+            var level = numberingPart.Numbering.Elements<AbstractNum>()
+                .FirstOrDefault(a => a.AbstractNumberId == abstractNumId)?
+                .Elements<Level>().FirstOrDefault(l => l.LevelIndex! == ilvl);
+
+            var ind = level?.GetFirstChild<Indentation>();
+            if (ind != null) {
+               if (ind.Left != null)
+                  migraPara.Format.LeftIndent = Unit.FromPoint(double.Parse(ind.Left.Value!) / 20.0);
+
+               if (ind.Hanging != null)
+                  migraPara.Format.FirstLineIndent = -Unit.FromPoint(double.Parse(ind.Hanging.Value!) / 20.0);
+               else if (ind.FirstLine != null)
+                  migraPara.Format.FirstLineIndent = Unit.FromPoint(double.Parse(ind.FirstLine.Value!) / 20.0);
+            }
+         }
+
+         return migraPara;
+      }
+
+      private void ApplyIndentation(OpenXmlParagraph para, MigraDocParagraph migraPara) {
+         OpenXmlIndentetion indent = para.ParagraphProperties?.Indentation!;
+         if (indent == null)
+            return;
+
+         double? left = double.Parse(indent.Left?.Value!);
+         double? hanging = double.Parse(indent.Hanging?.Value!);
+         double? firstLine = double.Parse(indent.FirstLine?.Value!);
+
+         if (left != null)
+            migraPara.Format.LeftIndent = Unit.FromPoint(left.Value / 20.0);
+
+         if (hanging != null)
+            migraPara.Format.FirstLineIndent = -Unit.FromPoint(hanging.Value / 20.0);
+         else if (firstLine != null)
+            migraPara.Format.FirstLineIndent = Unit.FromPoint(firstLine.Value / 20.0);
+
+         // 🔥 Forza il tab dopo il numero per rispettare l’indentazione
+         //if (migraPara.Format.ListInfo != null)
+         //   migraPara.Format.ListInfo.FollowCharacter = ListFollow.ListTab;
       }
 
       // Applies page margins from the Word document to the MigraDoc section
