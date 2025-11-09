@@ -5,8 +5,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <RootNamespace>net.nick4name.MergeService</RootNamespace>
-    <AssemblyVersion>1.25.10.0</AssemblyVersion>
-    <FileVersion>1.25.10.0</FileVersion>
+    <AssemblyVersion>1.25.11.0</AssemblyVersion>
+    <FileVersion>1.25.11.0</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -14,6 +14,7 @@
     <Compile Remove="Docx\MigraConverterHelper.cs" />
     <Compile Remove="IMerge.cs" />
     <Compile Remove="IMergeDocType.cs" />
+    <Compile Remove="Text\MergeText.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -42,6 +43,11 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\MergeExtensions\MergeExtensions.csproj" />
+    <ProjectReference Include="..\..\TextMergeService\TextMergeService.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Text\" />
   </ItemGroup>
 
 </Project>

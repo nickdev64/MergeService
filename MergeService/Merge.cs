@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.StaticFiles;
 using net.nick4name.MergeService.Docx;
 using net.nick4name.MergeService.Text;
+using net.nick4name.MergeExtensions;
 using System.Text;
+using System.Reflection;
 
 namespace net.nick4name.MergeService {
 
@@ -77,7 +79,6 @@ namespace net.nick4name.MergeService {
       /// <returns></returns>
       /// <exception cref="InvalidOperationException"></exception>
       public byte[] ExecuteMerge() {
-         //public byte[] ExecuteMerge<T1>(T1 context) {
          byte[]? file = null;
 
          switch (_mime) {
@@ -85,7 +86,10 @@ namespace net.nick4name.MergeService {
                if (_filetext == null || _filetext.Length == 0)
                   throw new InvalidOperationException("File template non impostato oppure vuoto.");
 
-               IMergeDocType mergeTxt = new MergeText<T>();
+               //IMergeDocType mergeTxt IMergeDocType mergeTxt = new MergeText<T>();
+               PlugIn plugin = PlugIns![_mime];
+               IMergeDocType mergeTxt = CreateMergeTextInstance<T>(plugin);
+
                mergeTxt.SourceContent = Encoding.UTF8.GetBytes(_filetext);
                byte[] mergedText = mergeTxt.ExecuteMerge<T>(SrcContext!.GetInstance());
 
@@ -106,6 +110,39 @@ namespace net.nick4name.MergeService {
 
          return file!;
       }
+
+      /// <summary>
+      /// Crea a run-time e restituisce l'istanza di IMergeDocType per il plug-in di merge specificato nell'istanza PlugIn.
+      /// </summary>
+      /// <typeparam name="T">Istanza di tabella o vista di db.</typeparam>
+      /// <param name="plugin">Istanza PlugIn che descrive i dati di reflection del plug-in e il content-type gestito.</param>
+      /// <returns>Istanza del plug-in.</returns>
+      /// <exception cref="InvalidOperationException">Tipo MergeText<T> non trovato.</exception>
+      /// <exception cref="InvalidCastException">Il tipo T non implementa IMergeDocType.</exception>
+      public static IMergeDocType CreateMergeTextInstance<T>(PlugIn plugin) where T : class {
+         // Carica l'assembly
+         var assembly = Assembly.LoadFrom(plugin.Assembly!);
+
+         // Ottieni il tipo generico aperto
+         var openType = assembly.GetType(plugin.Class!+ "`1");
+         if (openType == null)
+            throw new InvalidOperationException("Tipo MergeText<T> non trovato.");
+
+         // Chiudi il tipo con T
+         var closedType = openType.MakeGenericType(typeof(T));
+
+         // Crea l'istanza
+         var instance = Activator.CreateInstance(closedType);
+
+         // Cast a IMergeDocType
+         return instance as IMergeDocType
+             ?? throw new InvalidCastException($"Il tipo {closedType} non implementa IMergeDocType.");
+      }
+
+      /// <summary>
+      /// Elenco dei plug-in di merge caricati dal file di configurazione.
+      /// </summary>
+      public Dictionary<string, PlugIn>? PlugIns { get; set; } = null;
 
       /// <summary>
       /// Restituisce il MIME type di filePath in base alla sua estensione.

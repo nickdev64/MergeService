@@ -1,4 +1,9 @@
-﻿namespace net.nick4name.MergeService {
+﻿using DocumentFormat.OpenXml.ExtendedProperties;
+using net.nick4name.MergeExtensions;
+using System.Reflection;
+using System.Xml.Linq;
+
+namespace net.nick4name.MergeService {
 
    /// <summary>
    /// Classe entry point del servizio per eseguire il merge di un file di testo template con i dati 
@@ -13,6 +18,8 @@
 
       private IMerge _merge;
 
+      private static Dictionary<string, PlugIn>? _plugIns;
+
       /// <summary>
       /// Restituisce il servizio di merge per l'istanza generica T.
       /// </summary>
@@ -20,7 +27,45 @@
       public MergeService(IMyContext<T> ctx) {
          _ctx = ctx;
          _merge = new Merge<T>(ctx);
-         //...
+
+         if (!initPlugins()) {
+            throw new InvalidOperationException("No plug-ins initialized for merge service.");
+         }
+         ((Merge<T>)_merge).PlugIns = _plugIns;
+      }
+
+      private static bool initPlugins() {
+         string dllPath = Assembly.GetExecutingAssembly().Location;
+         string nomeDll = Path.GetFileName(dllPath);
+         string configPath = $"{nomeDll}.config";
+
+         _plugIns = loadPluginList(configPath);
+
+         return _plugIns != null;
+      }
+
+      /// <summary>
+      /// Restituisce la lista dei plug-in di merge definiti nel file di configurazione.
+      /// </summary>
+      /// <param name="configPath">Path del file di configurazione.</param>
+      /// <returns>Proprietà Mime è chiave della lista.</returns>
+      private static Dictionary<string, PlugIn> loadPluginList(string configPath) {
+         Dictionary<string, PlugIn> plugins = new Dictionary<string, PlugIn>();
+         XDocument xConfig = XDocument.Load(configPath);
+         var pluginElements = xConfig.Descendants("plug-in");
+         foreach (var element in pluginElements) {
+            PlugIn plugin = new PlugIn {
+               Name = element.Attribute("name")?.Value,
+               Assembly = element.Attribute("assembly")?.Value,
+               Class = element.Attribute("class")?.Value,
+               Mime = element.Attribute("mime")?.Value
+            };
+            if (plugin.Mime != null) {
+               plugins[plugin.Mime] = plugin;
+            }
+         }
+
+         return plugins;
       }
 
       /// <summary>
