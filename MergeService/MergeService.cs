@@ -1,5 +1,6 @@
 ﻿using DocumentFormat.OpenXml.ExtendedProperties;
 using net.nick4name.MergeExtensions;
+using net.nick4name.MergeService.Exceptions;
 using System.Reflection;
 using System.Xml.Linq;
 
@@ -18,7 +19,10 @@ namespace net.nick4name.MergeService {
 
       private IMerge _merge;
 
+      private static string? _pluginsPath = "";
       private static Dictionary<string, PlugIn>? _plugIns;
+
+      private const string CONFIG_VERSION = "1.0";
 
       /// <summary>
       /// Restituisce il servizio di merge per l'istanza generica T.
@@ -38,10 +42,32 @@ namespace net.nick4name.MergeService {
          string dllPath = Assembly.GetExecutingAssembly().Location;
          string nomeDll = Path.GetFileName(dllPath);
          string configPath = $"{nomeDll}.config";
+         if (!File.Exists(configPath)) {
+            // file .config non trovato. Viene creato uno inizializzato
+            initFileConfig(configPath);
+         }
 
          _plugIns = loadPluginList(configPath);
 
          return _plugIns != null;
+      }
+
+      private static void initFileConfig(string configFile) {
+         XElement root = new XElement("configuration",
+               new XAttribute("version", CONFIG_VERSION),
+            new XElement("pluginsSection",
+               new XAttribute("path", ""),
+                     new XElement("plug-in",
+                        new XAttribute("name", ""),
+                        new XAttribute("assembly", ""),
+                        new XAttribute("class", ""),
+                        new XAttribute("mime", "")
+                      )
+             )
+          );
+
+         XDocument doc = new XDocument(root);
+         doc.Save(configFile);
       }
 
       /// <summary>
@@ -52,11 +78,33 @@ namespace net.nick4name.MergeService {
       private static Dictionary<string, PlugIn> loadPluginList(string configPath) {
          Dictionary<string, PlugIn> plugins = new Dictionary<string, PlugIn>();
          XDocument xConfig = XDocument.Load(configPath);
+         
+         string ver = xConfig.Root!.Attribute("version")!.Value ??
+            throw new ConfigErrorException($"Wrong configuration for {configPath}. Missing 'version' attribute for 'configuration' element.");
+         if (!ver.Equals(CONFIG_VERSION)) {
+            throw new ConfigWrongVersionException(configPath, ver, CONFIG_VERSION);
+         }
+
+         var pluginSect = xConfig.Root!.Elements().Where(x => x.Name.LocalName == "pluginsSection").FirstOrDefault();
+         if (pluginSect != null) {
+            _pluginsPath = pluginSect.Attribute("path")?.Value ?? null;
+         } else {
+            throw new ConfigErrorException($"Wrong configuration for {configPath}. Missing 'path' attribute for 'pluginsSection' element.");
+         }
+
+         if (_pluginsPath != null) {
+            if (!Path.Exists(_pluginsPath)) {
+               Directory.CreateDirectory(_pluginsPath);
+            }
+         } else {
+            throw new Exception("Plugins path not defined in configuration file.");
+         }
+
          var pluginElements = xConfig.Descendants("plug-in");
          foreach (var element in pluginElements) {
             PlugIn plugin = new PlugIn {
                Name = element.Attribute("name")?.Value,
-               Assembly = element.Attribute("assembly")?.Value,
+               Assembly = Path.Combine(_pluginsPath, element.Attribute("assembly")?.Value!),
                Class = element.Attribute("class")?.Value,
                Mime = element.Attribute("mime")?.Value
             };

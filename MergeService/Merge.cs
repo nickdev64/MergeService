@@ -88,7 +88,7 @@ namespace net.nick4name.MergeService {
 
                //IMergeDocType mergeTxt IMergeDocType mergeTxt = new MergeText<T>();
                PlugIn plugin = PlugIns![_mime];
-               IMergeDocType mergeTxt = CreateMergeTextInstance<T>(plugin);
+               IMergeDocType mergeTxt = CreatePlugInInstance<T>(plugin);
 
                mergeTxt.SourceContent = Encoding.UTF8.GetBytes(_filetext);
                byte[] mergedText = mergeTxt.ExecuteMerge<T>(SrcContext!.GetInstance());
@@ -117,16 +117,21 @@ namespace net.nick4name.MergeService {
       /// <typeparam name="T">Istanza di tabella o vista di db.</typeparam>
       /// <param name="plugin">Istanza PlugIn che descrive i dati di reflection del plug-in e il content-type gestito.</param>
       /// <returns>Istanza del plug-in.</returns>
-      /// <exception cref="InvalidOperationException">Tipo MergeText<T> non trovato.</exception>
+      /// <exception cref="InvalidOperationException">Tipo IMergeDocType<T> non trovato.</exception>
       /// <exception cref="InvalidCastException">Il tipo T non implementa IMergeDocType.</exception>
-      public static IMergeDocType CreateMergeTextInstance<T>(PlugIn plugin) where T : class {
+      public static IMergeDocType CreatePlugInInstance<T>(PlugIn plugin) where T : class {
          // Carica l'assembly
-         var assembly = Assembly.LoadFrom(plugin.Assembly!);
+         Assembly? assembly = null;
+         try {
+            assembly = Assembly.LoadFrom(plugin.Assembly!);
+         } catch (FileNotFoundException ex) {
+            throw new FileNotFoundException($"Assembly del plug-in non trovato: {plugin.Assembly}", ex);
+         }
 
          // Ottieni il tipo generico aperto
-         var openType = assembly.GetType(plugin.Class!+ "`1");
+         var openType = assembly!.GetType(plugin.Class! + "`1");
          if (openType == null)
-            throw new InvalidOperationException("Tipo MergeText<T> non trovato.");
+            throw new InvalidOperationException($"Tipo {plugin.Class}<T> non trovato.");
 
          // Chiudi il tipo con T
          var closedType = openType.MakeGenericType(typeof(T));
