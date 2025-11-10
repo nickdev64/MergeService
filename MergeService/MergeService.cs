@@ -1,5 +1,4 @@
-﻿using DocumentFormat.OpenXml.ExtendedProperties;
-using net.nick4name.MergeExtensions;
+﻿using net.nick4name.MergeExtensions;
 using net.nick4name.MergeService.Exceptions;
 using System.Reflection;
 using System.Xml.Linq;
@@ -13,14 +12,14 @@ namespace net.nick4name.MergeService {
    /// <typeparam name="T">Classe che definisce una tabella o vista di db.</typeparam>
    public class MergeService<T> where T : class {
 
-      // *** ATTENZIONE!!! Non rinominare _ctx. Vedi Stampe.xaml.cs -> GetGenericInstance
+      // *** ATTENZIONE!!!
+      // Non rinominare _ctx.
+      // Vedi Stampe.xaml.cs -> GetGenericInstance
       private IMyContext<T>? _ctx;
       // ***
 
       private IMerge _merge;
-
       private static string? _pluginsPath = "";
-      private static Dictionary<string, PlugIn>? _plugIns;
 
       private const string CONFIG_VERSION = "1.0";
 
@@ -32,26 +31,18 @@ namespace net.nick4name.MergeService {
          _ctx = ctx;
          _merge = new Merge<T>(ctx);
 
-         if (!initPlugins()) {
+         Dictionary<string, PlugIn> pluginList = loadPluginList();
+         if (pluginList==null) {
             throw new InvalidOperationException("No plug-ins initialized for merge service.");
          }
-         ((Merge<T>)_merge).PlugIns = _plugIns;
+
+         ((Merge<T>)_merge).PlugIns = pluginList;
       }
 
-      private static bool initPlugins() {
-         string dllPath = Assembly.GetExecutingAssembly().Location;
-         string nomeDll = Path.GetFileName(dllPath);
-         string configPath = $"{nomeDll}.config";
-         if (!File.Exists(configPath)) {
-            // file .config non trovato. Viene creato uno inizializzato
-            initFileConfig(configPath);
-         }
-
-         _plugIns = loadPluginList(configPath);
-
-         return _plugIns != null;
-      }
-
+      /// <summary>
+      /// Crea un file di configurazione inizializzato.
+      /// </summary>
+      /// <param name="configFile">Nome del file di configurazione.</param>
       private static void initFileConfig(string configFile) {
          XElement root = new XElement("configuration",
                new XAttribute("version", CONFIG_VERSION),
@@ -72,24 +63,37 @@ namespace net.nick4name.MergeService {
 
       /// <summary>
       /// Restituisce la lista dei plug-in di merge definiti nel file di configurazione.
+      /// La funzione determina il nome del file di configurazione in base al nome della DLL.
+      /// Se il file .config non esiste, viene creato uno inizializzato.
+      /// Verifica la versione del file di configurazione.
       /// </summary>
-      /// <param name="configPath">Path del file di configurazione.</param>
       /// <returns>Proprietà Mime è chiave della lista.</returns>
-      private static Dictionary<string, PlugIn> loadPluginList(string configPath) {
+      private static Dictionary<string, PlugIn> loadPluginList() {
          Dictionary<string, PlugIn> plugins = new Dictionary<string, PlugIn>();
-         XDocument xConfig = XDocument.Load(configPath);
-         
+
+         // determina il nome del file di configurazione
+         string dllPath = Assembly.GetExecutingAssembly().Location;
+         string nomeDll = Path.GetFileName(dllPath);
+         string configFilename = $"{nomeDll}.config";
+         if (!File.Exists(configFilename)) {
+            // file .config non trovato. Viene creato uno inizializzato
+            initFileConfig(configFilename);
+         }
+         //
+
+         XDocument xConfig = XDocument.Load(configFilename);
+
          string ver = xConfig.Root!.Attribute("version")!.Value ??
-            throw new ConfigErrorException($"Wrong configuration for {configPath}. Missing 'version' attribute for 'configuration' element.");
+            throw new ConfigErrorException($"Wrong configuration for {configFilename}. Missing 'version' attribute for 'configuration' element.");
          if (!ver.Equals(CONFIG_VERSION)) {
-            throw new ConfigWrongVersionException(configPath, ver, CONFIG_VERSION);
+            throw new ConfigWrongVersionException(configFilename, ver, CONFIG_VERSION);
          }
 
          var pluginSect = xConfig.Root!.Elements().Where(x => x.Name.LocalName == "pluginsSection").FirstOrDefault();
          if (pluginSect != null) {
             _pluginsPath = pluginSect.Attribute("path")?.Value ?? null;
          } else {
-            throw new ConfigErrorException($"Wrong configuration for {configPath}. Missing 'path' attribute for 'pluginsSection' element.");
+            throw new ConfigErrorException($"Wrong configuration for {configFilename}. Missing 'path' attribute for 'pluginsSection' element.");
          }
 
          if (_pluginsPath != null) {

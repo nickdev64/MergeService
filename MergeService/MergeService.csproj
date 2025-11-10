@@ -43,7 +43,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\MergeExtensions\MergeExtensions.csproj" />
-    <ProjectReference Include="..\..\TextMergeService\TextMergeService.csproj" />
   </ItemGroup>
 
   <ItemGroup>
