@@ -106,9 +106,11 @@ namespace net.nick4name.MergeService {
 
          var pluginElements = xConfig.Descendants("plug-in");
          foreach (var element in pluginElements) {
+            string relDir = Path.Combine(_pluginsPath, element.Attribute("name")?.Value!);
+
             PlugIn plugin = new PlugIn {
                Name = element.Attribute("name")?.Value,
-               Assembly = Path.Combine(_pluginsPath, element.Attribute("assembly")?.Value!),
+               Assembly = Path.Combine(relDir, element.Attribute("assembly")?.Value!),
                Class = element.Attribute("class")?.Value,
                Mime = element.Attribute("mime")?.Value
             };

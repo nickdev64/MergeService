@@ -1,6 +1,4 @@
-﻿using DocumentFormat.OpenXml.Math;
-
-namespace net.nick4name.MergeService {
+﻿namespace net.nick4name.MergeService {
    /// <summary>
    /// Classe che descrive i plug-in di merge presenti nel file di configurazione.
    /// </summary>

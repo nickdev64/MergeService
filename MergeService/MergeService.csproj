@@ -10,43 +10,20 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Docx\MergeFieldExtractor.cs" />
-    <Compile Remove="Docx\MigraConverterHelper.cs" />
     <Compile Remove="IMerge.cs" />
     <Compile Remove="IMergeDocType.cs" />
-    <Compile Remove="Text\MergeText.cs" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="Fonts\DejaVuSans-Bold.ttf" />
-    <None Remove="Fonts\DejaVuSans-BoldOblique.ttf" />
-    <None Remove="Fonts\DejaVuSans-Oblique.ttf" />
-    <None Remove="Fonts\DejaVuSans.ttf" />
-    <None Remove="Fonts\DejaVuSansMono.ttf" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <EmbeddedResource Include="Fonts\DejaVuSans-Bold.ttf" />
-    <EmbeddedResource Include="Fonts\DejaVuSans-BoldOblique.ttf" />
-    <EmbeddedResource Include="Fonts\DejaVuSans-Oblique.ttf" />
-    <EmbeddedResource Include="Fonts\DejaVuSans.ttf" />
-    <EmbeddedResource Include="Fonts\DejaVuSansMono.ttf" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="DocumentFormat.OpenXml" Version="3.3.0" />
     <PackageReference Include="Microsoft.AspNetCore.StaticFiles" Version="2.3.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.10" />
-    <PackageReference Include="PDFsharp-MigraDoc-GDI" Version="6.2.2" />
     <PackageReference Include="System.Drawing.Common" Version="9.0.10" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\MergeExtensions\MergeExtensions.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Text\" />
+    <Reference Include="net.nick4name.MergeExtensions">
+      <HintPath>..\..\..\..\..\MyPrograms\COMMON_BETA\HostHouse\net.nick4name.MergeExtensions.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>
