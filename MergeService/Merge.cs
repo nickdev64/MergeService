@@ -1,6 +1,4 @@
 ﻿using Microsoft.AspNetCore.StaticFiles;
-//using net.nick4name.MergeService.Docx;
-//using net.nick4name.MergeService.Text;
 using net.nick4name.MergeExtensions;
 using System.Text;
 using System.Reflection;
@@ -87,7 +85,6 @@ namespace net.nick4name.MergeService {
                if (_filetext == null || _filetext.Length == 0)
                   throw new InvalidOperationException("File template non impostato oppure vuoto.");
 
-               //IMergeDocType mergeTxt IMergeDocType mergeTxt = new MergeText<T>();
                IMergeDocType mergeTxt = CreatePlugInInstance<T>(plugin);
 
                mergeTxt.SourceContent = Encoding.UTF8.GetBytes(_filetext);
@@ -99,7 +96,6 @@ namespace net.nick4name.MergeService {
                if (string.IsNullOrEmpty(_filePath))
                   throw new InvalidOperationException("File template non impostato.");
 
-               //IMergeDocType mergeDocx = new MergeDocx<T>();
                IMergeDocType mergeDocx = CreatePlugInInstance<T>(plugin);
 
                mergeDocx.FileToMerge = _filePath;
