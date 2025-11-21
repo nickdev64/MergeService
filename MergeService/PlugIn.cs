@@ -3,6 +3,8 @@
    /// Classe che descrive i plug-in di merge presenti nel file di configurazione.
    /// </summary>
    public class PlugIn {
+      private string? _mode;
+
       /// <summary>
       /// Nome del plug-in.
       /// </summary>
@@ -22,5 +24,15 @@
       /// Mime type supportato dal plug-in.
       /// </summary>
       public string? Mime { get; set; }
+
+      /// <summary>
+      /// Modalità di utilizzo del servizio di merge: "sync" o "async".
+      /// Defalt "sync".
+      /// </summary>
+      public string? Mode
+      {
+         get => _mode ?? "sync";
+         set => _mode = value;
       }
+   }
 }

@@ -21,7 +21,9 @@ namespace net.nick4name.MergeService {
       private IMerge _merge;
       private static string? _pluginsPath = "";
 
-      private const string CONFIG_VERSION = "1.0";
+      private const string CONFIG_VERSION = "1.1";
+
+      public enum PluginModes { sync, async }
 
       /// <summary>
       /// Restituisce il servizio di merge per l'istanza generica T.
@@ -32,7 +34,7 @@ namespace net.nick4name.MergeService {
          _merge = new Merge<T>(ctx);
 
          Dictionary<string, PlugIn> pluginList = loadPluginList();
-         if (pluginList==null) {
+         if (pluginList == null) {
             throw new InvalidOperationException("No plug-ins initialized for merge service.");
          }
 
@@ -52,7 +54,8 @@ namespace net.nick4name.MergeService {
                         new XAttribute("name", ""),
                         new XAttribute("assembly", ""),
                         new XAttribute("class", ""),
-                        new XAttribute("mime", "")
+                        new XAttribute("mime", ""),
+                        new XAttribute("mode", "") // v.1.1: opz. "sync" default | "async"
                       )
              )
           );
@@ -112,7 +115,8 @@ namespace net.nick4name.MergeService {
                Name = element.Attribute("name")?.Value,
                Assembly = Path.Combine(relDir, element.Attribute("assembly")?.Value!),
                Class = element.Attribute("class")?.Value,
-               Mime = element.Attribute("mime")?.Value
+               Mime = element.Attribute("mime")?.Value,
+               Mode = element.Attribute("mode")?.Value.ToLower()
             };
             if (plugin.Mime != null) {
                plugins[plugin.Mime] = plugin;
@@ -135,7 +139,11 @@ namespace net.nick4name.MergeService {
       /// <returns>Array di byte del documento dopo il merge.</returns>
       /// <remarks>Richiede che la proprietà FileToMerge sia stata valorizzata.</remarks>
       public byte[] ExecuteMerge() {
-         return _merge.ExecuteMerge(); //<T>(_ctx!.GetInstance());
+         return _merge.ExecuteMerge();
+      }
+
+      public Task<byte[]> ExecuteMergeAsync() {
+         return _merge.ExecuteMergeAsync();
       }
 
       /// <summary>
@@ -151,5 +159,15 @@ namespace net.nick4name.MergeService {
       /// </summary>
       public string FileMerged { set => _merge.FileMerged = value; }
 
+      public PluginModes PluginMode { 
+         get { 
+            switch (_merge.PluginMode) { 
+               case "async":
+                  return PluginModes.async;
+               default:
+                  return PluginModes.sync;
+            }
+         } 
+      }
    }
 }

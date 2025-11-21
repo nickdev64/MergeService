@@ -2,6 +2,7 @@
 using net.nick4name.MergeExtensions;
 using System.Text;
 using System.Reflection;
+using System.Reflection.Metadata.Ecma335;
 
 namespace net.nick4name.MergeService {
 
@@ -15,6 +16,7 @@ namespace net.nick4name.MergeService {
       private string? _filePath;
       private string? _mime = null;
       private string? _fileMerged = null;
+      private PlugIn _plugin = null!;
 
       /// <summary>
       /// Rappresenta il contesto dati per l'istanza generica T con cui realizzare il merge con il file template.
@@ -46,6 +48,10 @@ namespace net.nick4name.MergeService {
          set {
             string filePath = Path.GetFullPath(value);
             _mime = getContentType(filePath);
+
+            // determina il plugin che processerà il file
+            _plugin = PlugIns![_mime!];
+
             switch (_mime) {
                case "text/plain":
                   using (StreamReader reader = new StreamReader(filePath, Encoding.UTF8)) {
@@ -76,7 +82,55 @@ namespace net.nick4name.MergeService {
       /// </summary>
       /// <returns></returns>
       /// <exception cref="InvalidOperationException"></exception>
-      public byte[] ExecuteMerge() {
+      public async Task<byte[]> ExecuteMerge() {
+         byte[]? file = null;
+
+         //_plugin = PlugIns![_mime!];
+         switch (_mime) {
+            case "text/plain":
+               if (_filetext == null || _filetext.Length == 0)
+                  throw new InvalidOperationException("File template non impostato oppure vuoto.");
+
+               IMergeDocType mergeTxt = CreatePlugInInstance<T>(_plugin);
+
+               mergeTxt.SourceContent = Encoding.UTF8.GetBytes(_filetext);
+               byte[] mergedText = mergeTxt.ExecuteMerge<T>(SrcContext!.GetInstance());
+
+               file = mergedText;
+               break;
+            case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+               if (string.IsNullOrEmpty(_filePath))
+                  throw new InvalidOperationException("File template non impostato.");
+
+               switch (_plugin.Mode) {
+                  case "async":
+                     IMergeDocTypeAsync<T> mergeAsync = await CreatePlugInInstanceAsync<T>(_plugin);
+                     mergeAsync.FileToMerge = _filePath;
+                     mergeAsync.FileMerged = _fileMerged!;
+                     file = await mergeAsync.ExecuteMergeAsync(SrcContext!.GetInstance());
+                     break;
+                  case "sync":
+                     IMergeDocType mergeSync = CreatePlugInInstance<T>(_plugin);
+                     mergeSync.SourceContent = await File.ReadAllBytesAsync(_filePath);
+                     file = mergeSync.ExecuteMerge<T>(SrcContext!.GetInstance());
+                     break;
+                  default:
+                     throw new InvalidOperationException($"Plugin mode {_plugin.Mode} non supportato.");
+               }
+
+               //IMergeDocTypeAsync<T> mergeDocx = await CreatePlugInInstanceAsync<T>(_plugin);
+               //mergeDocx.FileToMerge = _filePath;
+               //mergeDocx.FileMerged = _fileMerged!;
+               //await mergeDocx.ExecuteMergeAsync(SrcContext!.GetInstance());
+               break;
+            default:
+               throw new InvalidOperationException("File type not supported for merge: " + _mime);
+         }
+
+         return file!;
+      }
+
+      byte[] IMerge.ExecuteMerge() {
          byte[]? file = null;
 
          PlugIn plugin = PlugIns![_mime!];
@@ -96,17 +150,36 @@ namespace net.nick4name.MergeService {
                if (string.IsNullOrEmpty(_filePath))
                   throw new InvalidOperationException("File template non impostato.");
 
-               IMergeDocType mergeDocx = CreatePlugInInstance<T>(plugin);
+               IMergeDocType mergeDocx = CreatePlugInInstance<T>(_plugin);
 
                mergeDocx.FileToMerge = _filePath;
                mergeDocx.FileMerged = _fileMerged!;
-               mergeDocx.ExecuteMerge<T>(SrcContext!.GetInstance());
+               mergeDocx.ExecuteMerge(SrcContext!.GetInstance());
                break;
             default:
                throw new InvalidOperationException("File type not supported for merge: " + _mime);
          }
 
          return file!;
+      }
+
+      public async Task<byte[]> ExecuteMergeAsync() {
+         if (string.IsNullOrEmpty(_filePath))
+            throw new InvalidOperationException("File template non impostato.");
+
+         if (_mime == null || !PlugIns!.ContainsKey(_mime))
+            throw new InvalidOperationException($"MIME {_mime} type del file template non supportato in un processo asincrono.");
+
+         PlugIn plugin = PlugIns![_mime!];
+         if (plugin == null)
+            throw new InvalidOperationException($"Plug-in per MIME type {_mime} non configurato.");
+
+         IMergeDocTypeAsync<T> mergeDocx = await CreatePlugInInstanceAsync<T>(plugin);
+
+         mergeDocx.FileToMerge = _filePath;
+         mergeDocx.FileMerged = _fileMerged!;
+         byte[] file = await mergeDocx.ExecuteMergeAsync(SrcContext!.GetInstance());
+         return file;
       }
 
       /// <summary>
@@ -142,10 +215,42 @@ namespace net.nick4name.MergeService {
              ?? throw new InvalidCastException($"Il tipo {closedType} non implementa IMergeDocType.");
       }
 
+      public async static Task<IMergeDocTypeAsync<T>> CreatePlugInInstanceAsync<T>(PlugIn plugin) where T : class {
+         // Carica l'assembly
+         Assembly? assembly = null;
+         try {
+            assembly = Assembly.LoadFrom(plugin.Assembly!);
+         } catch (FileNotFoundException ex) {
+            throw new FileNotFoundException($"Assembly del plug-in non trovato: {plugin.Assembly}", ex);
+         }
+
+         // Ottieni il tipo generico aperto
+         var openType = assembly!.GetType(plugin.Class! + "`1");
+         if (openType == null)
+            throw new InvalidOperationException($"Tipo {plugin.Class}<T> non trovato.");
+
+         // Chiudi il tipo con T
+         var closedType = openType.MakeGenericType(typeof(T));
+
+         // Crea l'istanza
+         var instance = Activator.CreateInstance(closedType);
+
+         // Cast a IMergeDocType
+         return instance as IMergeDocTypeAsync<T>
+             ?? throw new InvalidCastException($"Il tipo {closedType} non implementa IMergeDocTypeAsync<T>.");
+      }
+
       /// <summary>
       /// Elenco dei plug-in di merge caricati dal file di configurazione.
       /// </summary>
       public Dictionary<string, PlugIn>? PlugIns { get; set; } = null;
+
+      /// <summary>
+      /// Restituisce la modalità di funzionamento "sync" o "async" del plug-in attivo.
+      /// </summary>
+      public string PluginMode { 
+         get { return _plugin.Mode!; } 
+      }
 
       /// <summary>
       /// Restituisce il MIME type di filePath in base alla sua estensione.
