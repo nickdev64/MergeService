@@ -1,8 +1,7 @@
 ﻿using Microsoft.AspNetCore.StaticFiles;
 using net.nick4name.MergeExtensions;
-using System.Text;
 using System.Reflection;
-using System.Reflection.Metadata.Ecma335;
+using System.Text;
 
 namespace net.nick4name.MergeService {
 
@@ -85,7 +84,6 @@ namespace net.nick4name.MergeService {
       public async Task<byte[]> ExecuteMerge() {
          byte[]? file = null;
 
-         //_plugin = PlugIns![_mime!];
          switch (_mime) {
             case "text/plain":
                if (_filetext == null || _filetext.Length == 0)
@@ -118,10 +116,6 @@ namespace net.nick4name.MergeService {
                      throw new InvalidOperationException($"Plugin mode {_plugin.Mode} non supportato.");
                }
 
-               //IMergeDocTypeAsync<T> mergeDocx = await CreatePlugInInstanceAsync<T>(_plugin);
-               //mergeDocx.FileToMerge = _filePath;
-               //mergeDocx.FileMerged = _fileMerged!;
-               //await mergeDocx.ExecuteMergeAsync(SrcContext!.GetInstance());
                break;
             default:
                throw new InvalidOperationException("File type not supported for merge: " + _mime);
@@ -174,7 +168,12 @@ namespace net.nick4name.MergeService {
          if (plugin == null)
             throw new InvalidOperationException($"Plug-in per MIME type {_mime} non configurato.");
 
-         IMergeDocTypeAsync<T> mergeDocx = await CreatePlugInInstanceAsync<T>(plugin);
+         IMergeDocTypeAsync<T> mergeDocx = null!;
+         try {
+            mergeDocx = await CreatePlugInInstanceAsync<T>(plugin); 
+         }catch(Exception ex) {
+            throw;
+         }
 
          mergeDocx.FileToMerge = _filePath;
          mergeDocx.FileMerged = _fileMerged!;
