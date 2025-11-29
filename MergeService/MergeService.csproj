@@ -7,6 +7,7 @@
     <RootNamespace>net.nick4name.MergeService</RootNamespace>
     <AssemblyVersion>1.25.11.1</AssemblyVersion>
     <FileVersion>1.25.11.1</FileVersion>
+    <AssemblyName>net.nick4name.MergeService</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
@@ -23,6 +24,7 @@
   <ItemGroup>
     <Reference Include="net.nick4name.MergeExtensions">
       <HintPath>..\..\..\..\..\MyPrograms\COMMON_BETA\HostHouse\net.nick4name.MergeExtensions.dll</HintPath>
+      <Private>True</Private>
     </Reference>
   </ItemGroup>
 
