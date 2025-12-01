@@ -99,12 +99,12 @@ namespace net.nick4name.MergeService {
             throw new ConfigErrorException($"Wrong configuration for {configFilename}. Missing 'path' attribute for 'pluginsSection' element.");
          }
 
-         if (_pluginsPath != null) {
+         if (!string.IsNullOrWhiteSpace(_pluginsPath)) {
             if (!Path.Exists(_pluginsPath)) {
                Directory.CreateDirectory(_pluginsPath);
             }
          } else {
-            throw new Exception("Plugins path not defined in configuration file.");
+            throw new Exception($"Plugins path is not defined in configuration file '{configFilename}'");
          }
 
          var pluginElements = xConfig.Descendants("plug-in");
@@ -159,15 +159,15 @@ namespace net.nick4name.MergeService {
       /// </summary>
       public string FileMerged { set => _merge.FileMerged = value; }
 
-      public PluginModes PluginMode { 
-         get { 
-            switch (_merge.PluginMode) { 
+      public PluginModes PluginMode {
+         get {
+            switch (_merge.PluginMode) {
                case "async":
                   return PluginModes.async;
                default:
                   return PluginModes.sync;
             }
-         } 
+         }
       }
    }
 }

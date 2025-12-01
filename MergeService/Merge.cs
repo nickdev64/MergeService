@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.StaticFiles;
 using net.nick4name.MergeExtensions;
+using net.nick4name.MergeService.Exceptions;
 using System.Reflection;
 using System.Text;
 
@@ -49,6 +50,9 @@ namespace net.nick4name.MergeService {
             _mime = getContentType(filePath);
 
             // determina il plugin che processerà il file
+            if (!PlugIns!.ContainsKey(_mime)) {
+               throw new ConfigErrorException($"No plugin defined to handle documents with content type ‘{_mime}’");
+            }
             _plugin = PlugIns![_mime!];
 
             switch (_mime) {
